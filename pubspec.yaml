@@ -105,33 +105,16 @@ flutter:
     - assets/img/Group 63.png
     - assets/img/sew.png
 
-
-    #Not Final
-
-    - assets/img/Seb.jpg
-    - assets/img/pants.png
-    - assets/img/longsleeve.png
-    - assets/img/dress1.png
-    - assets/img/dress2.png
-    - assets/img/dress3.png
-    - assets/img/dress5.png
-    - assets/img/dress7jpg.png
-    - assets/img/up.png
-    - assets/img/yamato.png
-    - assets/img/natalia simpson.png
     - assets/img/flowerbackground.jpg
-    - assets/img/design1.jpg
-    - assets/img/design2.jpg
+
 
 
     #Icons
     - assets/icons/upload.png
     - assets/icons/pen-circle.png
     - assets/icons/help-circle.png
-    - assets/icons/notification_icon.jpg
-    - assets/icons/clear.png
     - assets/icons/threadhub-applogo.png
-    - assets/icons/notif-message.png
+
     #GIF's
     - assets/gif/success.gif
     - assets/gif/manualmeasure.gif

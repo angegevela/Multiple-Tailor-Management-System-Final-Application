@@ -1,11 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
+import 'package:threadhub_system/Pages/login_page.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_availabilitysettings.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_fontprovider.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_help.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_personalinfo.dart';
+
 class TailorProfileSettingsPage extends StatefulWidget {
   const TailorProfileSettingsPage({super.key});
 
@@ -15,68 +20,87 @@ class TailorProfileSettingsPage extends StatefulWidget {
 }
 
 class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
-  // final GoogleSignIn googleSignIn = GoogleSignIn();
-  // final firebaseUser = FirebaseAuth.instance.currentUser;
-  String? fullName;
-  String? role; // store role
+  final GoogleSignIn googleSignIn = GoogleSignIn();
+  final firebaseUser = FirebaseAuth.instance.currentUser;
+  String? shopName;
+  String? role;
   String? _profileImageUrl;
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _loadUserProfile();
-  //   _loadUserData();
-  // }
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+    _loadUserData();
+  }
 
-  // Future<void> _loadUserProfile() async {
-  //   final user = Supabase.instance.client.auth.currentUser;
-  //   if (user == null) return;
+  Future<void> _loadUserProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  //   final response = await Supabase.instance.client
-  //       .from('profile-users')
-  //       .select('pictures')
-  //       .eq('id', user.id)
-  //       .maybeSingle();
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists) {
+        setState(() {
+          _profileImageUrl = doc.data()?['profileImageUrl'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading profile image: $e');
+    }
+  }
 
-  //   if (response != null && response['pictures'] != null) {
-  //     setState(() {
-  //       _profileImageUrl = response['pictures'];
-  //     });
-  //   }
-  // }
+  Future<void> _loadUserData() async {
+    if (firebaseUser == null) return;
 
-  // Future<void> _loadUserData() async {
-  //   if (firebaseUser == null) return;
+    final doc = await FirebaseFirestore.instance
+        .collection("Users")
+        .doc(firebaseUser!.uid)
+        .get();
 
-  //   final doc = await FirebaseFirestore.instance
-  //       .collection("Users") // Make sure this matches exactly
-  //       .doc(firebaseUser!.uid)
-  //       .get();
+    if (doc.exists) {
+      final data = doc.data();
+      final settings = data?['notificationSettings'] ?? {};
+      setState(() {
+        shopName = "${data?['shopName']}";
+        role = data?['role'] ?? "No role";
+        // Notification Push Buttons
+        pushNotifications = settings['pushNotifications'] ?? true;
+        reviewFeedbackAlerts = settings['reviewFeedbackAlerts'] ?? false;
+        appointmentReminders = settings['appointmentReminders'] ?? false;
+        customerMessages = settings['customerMessages'] ?? true;
+      });
+    }
+  }
 
-  //   if (doc.exists) {
-  //     final data = doc.data();
-  //     setState(() {
-  //       fullName = "${data?['firstName']} ${data?['surname']}";
-  //       role = data?['role'] ?? "No role";
-  //     });
-  //   }
-  // }
+  void signUserOut(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => LoginPage(showRegisterPage: () {}),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error signing out: $e");
+    }
+  }
 
-  bool notificationsEnabled = false;
   bool darkModeEnabled = false;
-  //Font Size Logic
-  String? _chosenValue;
+  bool pushNotifications = true;
+  bool reviewFeedbackAlerts = false;
+  bool appointmentReminders = false;
+  bool customerMessages = true;
+
+  //Font sizes
   Map<String, double> fontMap = {
     'Small': 14.0,
     'Medium': 16.0,
     'Large': 18.0,
     'Extra Large': 20.0,
   };
-
-  bool pushNotifications = true;
-  bool reviewFeedbackAlerts = false;
-  bool appointmentReminders = false;
-  bool customerMessages = true;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +109,7 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
       appBar: AppBar(
         toolbarHeight: 50,
         backgroundColor: const Color(0xFF262633),
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: const Color(0xFFD9D9D9),
       body: SingleChildScrollView(
@@ -93,10 +117,12 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 10),
+
+            // PROFILE IMAGE (no picker)
             CircleAvatar(
               radius: 90,
               backgroundColor: Colors.grey.shade300,
-              child: _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+              child: (_profileImageUrl != null && _profileImageUrl!.isNotEmpty)
                   ? CircleAvatar(
                       radius: 88,
                       backgroundImage: NetworkImage(_profileImageUrl!),
@@ -110,7 +136,7 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
 
             const SizedBox(height: 20),
             Text(
-              fullName ?? "Loading name...",
+              shopName ?? "Loading name...",
               style: GoogleFonts.moul(
                 textStyle: TextStyle(
                   fontSize: tailorfontSize,
@@ -132,15 +158,16 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
 
             const SizedBox(height: 10),
 
-            // Personal Information Header
+            // PERSONAL INFORMATION BUTTON
             Container(
-              decoration: BoxDecoration(color: const Color(0xFF002244)),
+              width: 350,
+              decoration: const BoxDecoration(color: Color(0xFF002244)),
               child: TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => TailorPersonalInformation(),
+                      builder: (context) => const TailorPersonalInformation(),
                     ),
                   );
                 },
@@ -179,9 +206,9 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
               ),
             ),
 
-            // Notification toggle
+            // NOTIFICATIONS
             Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
+              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -206,115 +233,39 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
                     ),
                   ),
                   children: [
-                    Divider(
-                      height: 9,
-                      thickness: 10,
-                      color: Colors.grey.shade300,
+                    _buildSwitchTile('Push Notifications', pushNotifications, (
+                      val,
+                    ) {
+                      _updateNotificationSetting('pushNotifications', val);
+                    }),
+                    _buildSwitchTile(
+                      'Review and Feedback Alerts',
+                      reviewFeedbackAlerts,
+                      (val) {
+                        _updateNotificationSetting('reviewFeedbackAlerts', val);
+                      },
                     ),
-                    Container(
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          ListTile(
-                            title: Text(
-                              'Push Notifications',
-                              style: GoogleFonts.prompt(
-                                fontWeight: FontWeight.w500,
-                                fontSize: tailorfontSize,
-                              ),
-                            ),
-                            trailing: CupertinoSwitch(
-                              activeTrackColor: Color(0xFF5B7DB1),
-                              inactiveTrackColor: Colors.grey.shade400,
-                              value: pushNotifications,
-                              onChanged: (val) {
-                                setState(() {
-                                  pushNotifications = val;
-                                });
-                              },
-                            ),
-                          ),
-                          ListTile(
-                            title: Text(
-                              'Review and Feedback Alerts',
-                              style: GoogleFonts.prompt(
-                                fontWeight: FontWeight.w400,
-                                fontSize: tailorfontSize,
-                              ),
-                            ),
-                            trailing: CupertinoSwitch(
-                              activeTrackColor: Color(0xFF5B7DB1),
-                              inactiveTrackColor: Colors.grey.shade400,
-                              value: reviewFeedbackAlerts,
-                              onChanged: (val) {
-                                setState(() {
-                                  reviewFeedbackAlerts = val;
-                                });
-                              },
-                            ),
-                          ),
-
-                          ListTile(
-                            title: Text(
-                              'Appointment Reminders',
-                              style: GoogleFonts.prompt(
-                                fontWeight: FontWeight.w400,
-                                fontSize: tailorfontSize,
-                              ),
-                            ),
-                            trailing: CupertinoSwitch(
-                              activeTrackColor: Color(0xFF5B7DB1),
-                              inactiveTrackColor: Colors.grey.shade400,
-                              value: appointmentReminders,
-                              onChanged: (val) {
-                                setState(() {
-                                  appointmentReminders = val;
-                                });
-                              },
-                            ),
-                          ),
-                          ListTile(
-                            title: Text(
-                              'Customer Messages',
-                              style: GoogleFonts.prompt(
-                                fontWeight: FontWeight.w400,
-                                fontSize: tailorfontSize,
-                              ),
-                            ),
-                            trailing: CupertinoSwitch(
-                              activeTrackColor: Color(0xFF5B7DB1),
-                              inactiveTrackColor: Colors.grey.shade400,
-                              value: customerMessages,
-                              onChanged: (val) {
-                                setState(() {
-                                  customerMessages = val;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                    _buildSwitchTile(
+                      'Appointment Reminders',
+                      appointmentReminders,
+                      (val) {
+                        _updateNotificationSetting('appointmentReminders', val);
+                      },
                     ),
+                    _buildSwitchTile('Customer Messages', customerMessages, (
+                      val,
+                    ) {
+                      _updateNotificationSetting('customerMessages', val);
+                    }),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 2),
-            // dark mode toggle
+            // DARK MODE
             Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
+              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: _boxDecoration(),
               child: SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                 title: Text(
@@ -333,227 +284,165 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
               ),
             ),
 
-            // Help ListTile
-            Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+            // HELP
+            _buildListTile(
+              title: 'Help',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TailorHelpPage()),
               ),
-              child: ListTile(
-                title: Text(
-                  'Help',
-                  style: GoogleFonts.prompt(
-                    fontWeight: FontWeight.w500,
-                    fontSize: tailorfontSize,
-                  ),
-                ),
-                trailing: Container(
-                  width: 25,
-                  height: 25,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: Icon(
-                    Icons.question_mark,
-                    size: 20,
-                    color: Colors.black,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => TailorHelpPage()),
-                  );
-                },
-              ),
+              trailing: _circleIcon(Icons.question_mark),
             ),
 
-            // Face Biometrics Set Up
-            Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                title: Text(
-                  'Availabilty Settings',
-                  style: GoogleFonts.prompt(
-                    fontWeight: FontWeight.w500,
-                    fontSize: tailorfontSize,
-                  ),
+            // AVAILABILITY
+            _buildListTile(
+              title: 'Availability Settings',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TailorAvailabilitySettings(),
                 ),
-                trailing: const Icon(Icons.arrow_forward, size: 24),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    // Navigate to BackupRestorePage()
-                    MaterialPageRoute(
-                      builder: (context) => TailorAvailabilitySettings(),
-                    ),
-                  );
-                },
               ),
+              trailing: const Icon(Icons.arrow_forward, size: 24),
             ),
 
-            // Font Size Dropdown
-            Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                title: Text(
-                  'Font Size',
-                  style: GoogleFonts.prompt(fontWeight: FontWeight.w500),
-                ),
-                trailing: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _chosenValue,
-                    style: GoogleFonts.montserratAlternates(
-                      textStyle: TextStyle(
-                        color: Colors.black87,
-                        fontSize: tailorfontSize,
-                      ),
-                    ),
+            // FONT SIZE
+            _buildFontSizeDropdown(context, tailorfontSize),
 
-                    dropdownColor: const Color(0xFFD9EAFD),
-
-                    icon: const Icon(Icons.arrow_downward, size: 24),
-                    items: fontMap.keys.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-
-                    onChanged: (value) {
-                      setState(() {
-                        _chosenValue = value!;
-                      });
-                    },
-                  ),
-                ),
-              ),
+            // LOGOUT
+            _buildListTile(
+              title: 'Logout',
+              onTap: () => signUserOut(context),
+              trailing: const Icon(Icons.logout),
             ),
 
-            // Face Biometrics Set Up
-            Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                title: Text(
-                  'Face Biometrics Set Up',
-                  style: GoogleFonts.prompt(
-                    fontWeight: FontWeight.w500,
-                    fontSize: tailorfontSize,
-                  ),
-                ),
-                trailing: const Icon(Icons.arrow_forward, size: 24),
-                // onTap: () {
-                //   Navigator.push(
-                //     context,
-                //     // Navigate to BackupRestorePage()
-                //     MaterialPageRoute(
-                //       builder: (context) => TailorFacebiometrics(),
-                //     ),
-                //   );
-                // },
-              ),
-            ),
-
-            // Logout Container
-            Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                title: Text(
-                  'Logout',
-                  style: GoogleFonts.prompt(
-                    fontWeight: FontWeight.w500,
-                    fontSize: tailorfontSize,
-                  ),
-                ),
-                // trailing: IconButton(
-                //   onPressed: () => widget.signUserOut(context),
-                //   icon: const Icon(Icons.logout),
-                // ),
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // Save Changes Container
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF72A0C1),
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 70,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              onPressed: () {
-                print("First button clicked");
-              },
-              child: Text(
-                "Save Changes",
-                style: GoogleFonts.noticiaText(
-                  fontWeight: FontWeight.w600,
-                  fontSize: tailorfontSize,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
+
+  void _updateNotificationSetting(String key, bool value) {
+    setState(() {
+      switch (key) {
+        case 'pushNotifications':
+          pushNotifications = value;
+          break;
+        case 'reviewFeedbackAlerts':
+          reviewFeedbackAlerts = value;
+          break;
+        case 'appointmentReminders':
+          appointmentReminders = value;
+          break;
+        case 'customerMessages':
+          customerMessages = value;
+          break;
+      }
+    });
+
+    if (firebaseUser != null) {
+      FirebaseFirestore.instance.collection("Users").doc(firebaseUser!.uid).set(
+        {
+          'notificationSettings': {
+            'pushNotifications': pushNotifications,
+            'reviewFeedbackAlerts': reviewFeedbackAlerts,
+            'appointmentReminders': appointmentReminders,
+            'customerMessages': customerMessages,
+          },
+        },
+        SetOptions(merge: true),
+      );
+    }
+  }
+
+  Widget _buildSwitchTile(
+    String title,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return ListTile(
+      title: Text(
+        title,
+        style: GoogleFonts.prompt(fontWeight: FontWeight.w400),
+      ),
+      trailing: CupertinoSwitch(
+        activeTrackColor: const Color(0xFF5B7DB1),
+        inactiveTrackColor: Colors.grey.shade400,
+        value: value,
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildListTile({
+    required String title,
+    required VoidCallback onTap,
+    required Widget trailing,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: _boxDecoration(),
+      child: ListTile(
+        title: Text(
+          title,
+          style: GoogleFonts.prompt(fontWeight: FontWeight.w500),
+        ),
+        trailing: trailing,
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildFontSizeDropdown(BuildContext context, double fontSize) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: _boxDecoration(),
+      child: ListTile(
+        title: Text(
+          'Font Size',
+          style: GoogleFonts.prompt(fontWeight: FontWeight.w500),
+        ),
+        trailing: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: context.watch<TailorFontprovider>().chosenValue,
+            style: GoogleFonts.montserratAlternates(
+              textStyle: TextStyle(color: Colors.black87, fontSize: fontSize),
+            ),
+            dropdownColor: const Color(0xFFD9EAFD),
+            icon: const Icon(Icons.arrow_downward, size: 24),
+            items: fontMap.keys.map((String key) {
+              return DropdownMenuItem<String>(value: key, child: Text(key));
+            }).toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              context.read<TailorFontprovider>().setFontSize(value);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _boxDecoration() => BoxDecoration(
+    color: Colors.white,
+    boxShadow: [
+      BoxShadow(
+        color: Colors.grey.shade300,
+        blurRadius: 6,
+        offset: const Offset(0, 3),
+      ),
+    ],
+  );
+
+  Widget _circleIcon(IconData icon) => Container(
+    width: 25,
+    height: 25,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.black, width: 2),
+    ),
+    child: Icon(icon, size: 20, color: Colors.black),
+  );
 }

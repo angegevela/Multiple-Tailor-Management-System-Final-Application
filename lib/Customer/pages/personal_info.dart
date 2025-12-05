@@ -36,7 +36,6 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
 
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       setState(() => _isLoading = false);
       return;
@@ -68,68 +67,60 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
 
-    if (pickedFile == null) return;
-
-    final file = File(pickedFile.path);
+    final file = File(picked.path);
     setState(() => _imageFile = file);
 
+    final user = FirebaseAuth.instance.currentUser!;
+    final ext = file.path.split('.').last;
+    final path = 'pictures/${user.uid}.$ext';
+
     try {
-      // Use FirebaseAuth since you’re not authenticating via Supabase
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        debugPrint("Firebase user not found.");
-        return;
-      }
+      final bytes = await file.readAsBytes();
 
-      final userId = user.uid;
-      final fileExt = file.path.split('.').last;
-      final fileName = '$userId.$fileExt';
-      final filePath = 'pictures/$fileName';
-
-      debugPrint("Uploading to Supabase: $filePath");
-
-      // Upload to the correct bucket
       await Supabase.instance.client.storage
-          .from('profile-user')
-          .upload(filePath, file, fileOptions: const FileOptions(upsert: true));
+          .from('profile_pictures')
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
-      debugPrint("Upload complete.");
+      final url = Supabase.instance.client.storage
+          .from('profile_pictures')
+          .getPublicUrl(path);
 
-      // Get the public URL
-      final publicUrl = Supabase.instance.client.storage
-          .from('profile-user')
-          .getPublicUrl(filePath);
+      final cacheBustedUrl = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
 
-      debugPrint("Generated URL: $publicUrl");
+      await FirebaseFirestore.instance.collection('Users').doc(user.uid).update(
+        {'profileImageUrl': cacheBustedUrl},
+      );
 
-      // Update Firestore
-      await FirebaseFirestore.instance.collection('Users').doc(userId).update({
-        'profileImageUrl': publicUrl,
-      });
+      setState(() => _profileImageUrl = cacheBustedUrl);
 
-      debugPrint("Firestore updated with profileImageUrl.");
+      debugPrint('✅ Uploaded to path: $path');
+      debugPrint('🌐 Public URL: $cacheBustedUrl');
 
-      // Update state to show uploaded image
-      setState(() {
-        _profileImageUrl = publicUrl;
-        _imageFile = null; // remove temporary file
-      });
-    } catch (e, st) {
-      debugPrint("Upload error: $e");
-      debugPrint(st.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile picture updated successfully!")),
+      );
+    } catch (e) {
+      debugPrint('❌ Upload error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Upload failed. Please try again.")),
+      );
     }
   }
 
   Future<void> _saveChanges() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    setState(() => _isLoading = true);
 
     try {
       await FirebaseFirestore.instance
@@ -142,29 +133,36 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
             'profileImageUrl': _profileImageUrl ?? '',
           });
 
-      await _loadUserData();
+      setState(() => _isLoading = false);
 
       if (!mounted) return;
 
-      showDialog(
+      final result = await showDialog<bool>(
         context: context,
-        barrierDismissible: false,
         builder: (context) => AlertDialog(
           title: const Text("Saved"),
-          content: const Text("Your changes have been saved."),
+          content: const Text("Your changes have been saved successfully."),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text("Agree"),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("OK"),
             ),
           ],
         ),
       );
+
+      if (result == true && mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       debugPrint("Save error: $e");
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error saving changes. Please try again."),
+        ),
+      );
     }
   }
 
@@ -175,67 +173,54 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
     String? hint,
     int maxLines = 1,
   }) {
-    return Builder(
-      builder: (context) {
-        final fontSize = context
-            .watch<FontProvider>()
-            .fontSize;
+    final fontSize = context.watch<FontProvider>().fontSize;
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: fontSize, 
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              TextFormField(
-                controller: controller,
-                readOnly: readOnly,
-                maxLines: maxLines,
-                decoration: InputDecoration(
-                  hintText: hint ?? label,
-                  contentPadding: const EdgeInsets.all(12),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: const BorderSide(
-                      color: Colors.black,
-                      width: 2.0,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: const BorderSide(
-                      color: Colors.deepPurple,
-                      width: 2.5,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold),
           ),
-        );
-      },
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            readOnly: readOnly,
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              hintText: hint ?? label,
+              contentPadding: const EdgeInsets.all(12),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.black, width: 2.0),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(
+                  color: Colors.deepPurple,
+                  width: 2.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = context.watch<FontProvider>().fontSize;
+
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final fontSize = context.watch<FontProvider>().fontSize;
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF6082B6),
         title: Text(
-          'Back',
+          'Personal Information',
           style: GoogleFonts.moul(
             fontSize: fontSize,
             fontWeight: FontWeight.w300,
@@ -247,55 +232,48 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 90,
-                    backgroundColor: Colors.black,
-                    child: _imageFile != null
-                        ? CircleAvatar(
-                            radius: 88,
-                            backgroundImage: FileImage(_imageFile!),
-                          )
-                        : (_profileImageUrl != null &&
-                              _profileImageUrl!.isNotEmpty)
-                        ? CircleAvatar(
-                            radius: 88,
-                            backgroundImage: NetworkImage(_profileImageUrl!),
-                          )
-                        : const CircleAvatar(
-                            radius: 88,
-                            backgroundColor: Colors.grey,
-                            child: Icon(
-                              Icons.person,
-                              size: 60,
-                              color: Colors.white,
-                            ),
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                CircleAvatar(
+                  radius: 90,
+                  backgroundColor: Colors.grey.shade300,
+                  child: _imageFile != null
+                      ? CircleAvatar(
+                          radius: 88,
+                          backgroundImage: FileImage(_imageFile!),
+                        )
+                      : (_profileImageUrl != null &&
+                            _profileImageUrl!.isNotEmpty)
+                      ? CircleAvatar(
+                          radius: 88,
+                          backgroundImage: NetworkImage(_profileImageUrl!),
+                        )
+                      : const CircleAvatar(
+                          radius: 88,
+                          backgroundColor: Colors.grey,
+                          child: Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.white,
                           ),
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: Colors.blueGrey,
-                          shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.image_outlined,
-                          size: 25,
-                          color: Colors.black,
-                        ),
-                      ),
+                ),
+                Positioned(
+                  bottom: 5,
+                  right: 5,
+                  child: GestureDetector(
+                    onTap: _pickAndUploadImage,
+                    child: const CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.blueGrey,
+                      child: Icon(Icons.image_outlined, color: Colors.black),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+
             const SizedBox(height: 20),
             _buildInputField(
               label: 'Full Name',
@@ -311,7 +289,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
               controller: _phoneController,
             ),
             _buildInputField(
-              label: 'Email Address',
+              label: 'Email',
               controller: _emailController,
               readOnly: true,
             ),
@@ -320,6 +298,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
               controller: _addressController,
               maxLines: 3,
             ),
+
             const SizedBox(height: 25),
             ElevatedButton(
               onPressed: _saveChanges,
@@ -335,11 +314,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
               ),
               child: Text(
                 'Save Changes',
-                style: TextStyle(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                style: TextStyle(fontSize: fontSize, color: Colors.white),
               ),
             ),
             const SizedBox(height: 30),

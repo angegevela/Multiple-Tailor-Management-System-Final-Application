@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -5,9 +6,9 @@ import 'package:threadhub_system/Customer/pages/Notification/customer_notificati
 import 'package:threadhub_system/Customer/pages/appointment_form.dart';
 import 'package:threadhub_system/Customer/pages/font_provider.dart';
 import 'package:threadhub_system/Customer/pages/product%20status/product_status.dart';
-import 'package:threadhub_system/Customer/pages/review.dart';
 import 'package:threadhub_system/Customer/pages/settings.dart';
 import 'package:threadhub_system/Customer/signup/customer_homepage.dart';
+
 class Menu extends StatelessWidget {
   const Menu({super.key});
 
@@ -122,7 +123,9 @@ class Menu extends StatelessWidget {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ProductStatusPage()),
+                  MaterialPageRoute(
+                    builder: (context) => ProductStatusPage(customerId: ''),
+                  ),
                 );
               },
             ),
@@ -150,41 +153,45 @@ class Menu extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AppointmentFormPage(),
+                    builder: (context) => AppointmentFormPage(
+                      customerId: FirebaseAuth.instance.currentUser!.uid,
+                      usedMeasurementId: null,
+                      measurements: const {},
+                      measurementType: '',
+                    ),
                   ),
                 );
               },
             ),
           ),
 
-          //Reviews Bar for Customer
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color(0xFF334257),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.edit_outlined, color: Colors.white),
-              title: Text(
-                'Review',
-                style: GoogleFonts.poppins(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RatingandReviewPage(),
-                  ),
-                );
-              },
-            ),
-          ),
+          // Container(
+          //   margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          //   decoration: BoxDecoration(
+          //     color: Color(0xFF334257),
+          //     borderRadius: BorderRadius.circular(10),
+          //   ),
+          //   child: ListTile(
+          //     leading: const Icon(Icons.edit_outlined, color: Colors.white),
+          //     title: Text(
+          //       'Review',
+          //       style: GoogleFonts.poppins(
+          //         fontSize: fontSize,
+          //         fontWeight: FontWeight.w400,
+          //         color: Colors.white,
+          //       ),
+          //     ),
+          //     onTap: () {
+          //       Navigator.pop(context);
+          //       Navigator.push(
+          //         context,
+          //         MaterialPageRoute(
+          //           builder: (context) => RatingandReviewPage(),
+          //         ),
+          //       );
+          //     },
+          //   ),
+          // ),
 
           //Notification Menu Bar
           Container(
@@ -206,14 +213,34 @@ class Menu extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
+              // onTap: () {
+              //   Navigator.pop(context);
+              //   // Navigator.push(
+              //   //   context,
+              //   //   MaterialPageRoute(
+              //   //     builder: (context) => CustomerNotification(appointmentData: {}, tailor: {}, customerId: '',),
+              //   //   ),
+              //   // );
+              //   // Navigate only after the notification is saved
+
+              // },
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CustomerNotification(),
-                  ),
-                );
+
+                final currentUser = FirebaseAuth.instance.currentUser;
+                if (currentUser != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CustomerNotification(customerId: currentUser.uid),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('User not logged in')),
+                  );
+                }
               },
             ),
           ),

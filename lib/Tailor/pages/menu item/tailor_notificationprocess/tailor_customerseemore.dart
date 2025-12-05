@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class TailorCustomerSeeMore extends StatefulWidget {
-  const TailorCustomerSeeMore({super.key});
+  const TailorCustomerSeeMore({super.key, required Map<String, String> appointmentData});
 
   @override
   State<TailorCustomerSeeMore> createState() => _TailorCustomerSeeMoreState();
@@ -360,7 +360,9 @@ class _TailorCustomerSeeMoreState extends State<TailorCustomerSeeMore> {
               const SizedBox(height: 20),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,

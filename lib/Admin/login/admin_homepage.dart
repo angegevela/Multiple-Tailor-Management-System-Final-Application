@@ -63,7 +63,7 @@ class AdminHomePage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 20), // height space between button and containers
+              const SizedBox(height: 20),
 
               Container(
                 height: 530,

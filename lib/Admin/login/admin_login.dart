@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:threadhub_system/Admin/login/admin_homepage.dart';
-import 'package:threadhub_system/Admin/login/tc_admin.dart';
-import 'package:threadhub_system/Pages/forgot_pw_page1.dart';
 
+import 'package:threadhub_system/Admin/login/tc_admin.dart';
+import 'package:threadhub_system/Admin/pages/sidebar/appointment.dart';
+import 'package:threadhub_system/Pages/forgot_pw_page1.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -51,8 +51,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           context,
           MaterialPageRoute(
             builder: (context) {
-              return AdminHomePage();
-            }, // to email flow
+              return AdminAppointmentPage();
+            },
           ),
         );
       }
@@ -70,7 +70,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   }
 
   //Remember Me - Checklist
-  bool _rememberMe = false;
+  final bool _rememberMe = false;
 
   //Password hide - Icon/Transition
   bool passwordVisible = false;
@@ -97,7 +97,6 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
             ),
             child: Stack(
               children: [
-                // Background image
                 Positioned.fill(
                   child: Opacity(
                     opacity: 1.0,
@@ -222,33 +221,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                           ),
 
                           const SizedBox(height: 30),
-                          //Remember Me and Forgot Password - Row
+                          //Forgot Password
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Transform.scale(
-                                scale: 0.7,
-                                child: Checkbox(
-                                  value: _rememberMe,
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      _rememberMe = value ?? false;
-                                    });
-                                  },
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _rememberMe = !_rememberMe;
-                                  });
-                                },
-                                child: const Text(
-                                  'Remember Me',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
                               const SizedBox(width: 45),
                               GestureDetector(
                                 onTap: () {
@@ -307,42 +283,30 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Checkbox(
-                                  value: _agreeToTerms,
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      _agreeToTerms = value ?? false;
-                                    });
-                                  },
-                                ),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () async {
-                                      // Navigate to Terms page and wait for result
-                                      final accepted =
-                                          await Navigator.push<bool>(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const AdminTermsCondition(),
-                                            ),
-                                          );
-
-                                      // If user accepted terms, check the box
-                                      if (accepted == true) {
-                                        setState(() {
-                                          _agreeToTerms = true;
-                                        });
-                                      }
-                                    },
-                                    child: Text(
-                                      'I agree to the Terms and Conditions',
-                                      style: GoogleFonts.chivo(
-                                        fontSize: 10,
-                                        fontStyle: FontStyle.italic,
-                                        decoration: TextDecoration.underline,
+                                GestureDetector(
+                                  onTap: () async {
+                                    final accepted = await Navigator.push<bool>(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const AdminTermsCondition(),
                                       ),
+                                    );
+
+                                    if (accepted == true) {
+                                      setState(() {
+                                        _agreeToTerms = true;
+                                      });
+                                    }
+                                  },
+                                  child: Text(
+                                    'I agree to the Terms and Conditions',
+                                    style: GoogleFonts.chivo(
+                                      fontSize: 10,
+                                      fontStyle: FontStyle.italic,
+                                      decoration: TextDecoration.underline,
                                     ),
                                   ),
                                 ),

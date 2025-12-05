@@ -19,7 +19,7 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   void initState() {
     super.initState();
-    print('Role selected: ${widget.role}'); 
+    print('Role selected: ${widget.role}');
   }
 
   @override
@@ -92,6 +92,7 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
     );
   }
+
   Widget _buildSocialIcons() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -101,6 +102,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const SnackBar(content: Text('Facebook sign-in not implemented')),
           );
         }),
+
         _socialIcon(MdiIcons.gmail, () async {
           User? user = await _authService.signInWithGoogle();
           if (user != null) {

@@ -1,8 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:threadhub_system/Customer/pages/Measurement%20Method/measurement_model.dart';
+import 'package:threadhub_system/Customer/pages/appointment_form.dart';
 
 class ProductMeasurementHistory extends StatefulWidget {
-  const ProductMeasurementHistory({super.key});
+  final String customerId;
+
+  const ProductMeasurementHistory({super.key, required this.customerId});
 
   @override
   State<ProductMeasurementHistory> createState() =>
@@ -10,823 +16,586 @@ class ProductMeasurementHistory extends StatefulWidget {
 }
 
 class _ProductMeasurementHistoryState extends State<ProductMeasurementHistory> {
-  bool _showDetails = false;
+  late Future<List<MeasurementRecord>> _measurements;
+  final supabase = Supabase.instance.client;
+  String? expandedId;
+  String? usedMeasurementId;
+  Map<String, List<MapEntry<String, String>>> entryLists = {};
+  Map<String, int> entryIndex = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _measurements = getCustomerMeasurementHistory(widget.customerId);
+  }
+
+  Future<List<MeasurementRecord>> getCustomerMeasurementHistory(
+    String customerId,
+  ) async {
+    final q1 = await FirebaseFirestore.instance
+        .collection('Appointment Forms')
+        .where('customerId', isEqualTo: customerId)
+        .get();
+
+    final q2 = await FirebaseFirestore.instance
+        .collection('Appointment Forms')
+        .where('toCustomerId', isEqualTo: customerId)
+        .get();
+
+    final Map<String, MeasurementRecord> uniqueRecords = {};
+
+    for (var doc in [...q1.docs, ...q2.docs]) {
+      final record = MeasurementRecord.fromFirestore(doc);
+      uniqueRecords[record.appointmentId] = record;
+    }
+
+    return uniqueRecords.values.toList();
+  }
+
+  Future<void> markMeasurementAsUsed(String appointmentId) async {
+    await FirebaseFirestore.instance
+        .collection('Customers')
+        .doc(widget.customerId)
+        .update({'usedMeasurementId': appointmentId});
+
+    setState(() {
+      usedMeasurementId = appointmentId;
+    });
+  }
+
+  Map<String, Future<String>> imageCache = {};
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
         backgroundColor: const Color(0xFF262633),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: const Color(0xFFEEEEEE),
-      body: SingleChildScrollView(
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(height: 10.0),
-                Container(
-                  width: 350.0,
-                  height: 60.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.black, width: 1.5),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Measurement History',
-                      style: GoogleFonts.inter(
-                        color: Colors.black,
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 10.0),
-                Container(
-                  width: 350.0,
-                  height: 130.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.black, width: 1.5),
-                  ),
-                  child: Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Image.asset(
-                          'assets/img/longsleeve.png',
-                          width: 60,
-                          height: 80,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 16.0,
-                            horizontal: 8.0,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Used For',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Custom Long Sleeves',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showDetails = !_showDetails;
-                                });
-                              },
-                              style: TextButton.styleFrom(
-                                backgroundColor: const Color(0xFFD9D9D9),
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 12.0,
-                                  horizontal: 20.0,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                  side: BorderSide(
-                                    color: Colors.black,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                _showDetails ? 'Hide Details' : 'Details',
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            TextButton(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    backgroundColor: const Color(0xFFC7D9DD),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    content: ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxHeight: 100,
-                                        maxWidth: 400,
-                                      ),
-                                      child: Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 8.0,
-                                            horizontal: 10.0,
-                                          ),
-                                          child: Text(
-                                            "Do you want to use this measurement for the new product project?",
-                                            style: GoogleFonts.jetBrainsMono(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    actionsPadding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    actions: <Widget>[
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          TextButton(
-                                            style: TextButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFF819067,
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 20,
-                                                vertical: 10,
-                                              ),
-                                            ),
-                                            onPressed: () {
-                                              Navigator.of(ctx).pop(true);
-                                            },
-                                            child: Text(
-                                              "Yes",
-                                              style: GoogleFonts.jetBrainsMono(
-                                                color: Colors.black,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                          TextButton(
-                                            style: TextButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFFD25D5D,
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 20,
-                                                vertical: 10,
-                                              ),
-                                            ),
-                                            onPressed: () {
-                                              Navigator.of(ctx).pop(false);
-                                            },
-                                            child: Text(
-                                              "No",
-                                              style: GoogleFonts.jetBrainsMono(
-                                                color: Colors.black,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                              style: TextButton.styleFrom(
-                                backgroundColor: const Color(0xFFD9D9D9),
-                                padding: EdgeInsets.symmetric(
-                                  vertical: 12.0,
-                                  horizontal: 20.0,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                  side: BorderSide(
-                                    color: Colors.black,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                'Used This',
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: FutureBuilder<List<MeasurementRecord>>(
+            future: _measurements,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text("No measurements yet."));
+              }
 
-                AnimatedCrossFade(
-                  firstChild: SizedBox.shrink(),
-                  secondChild: Container(
-                    height: 400,
-                    width: 350,
-                    margin: EdgeInsets.only(top: 8),
-                    padding: EdgeInsets.all(12),
+              final records = snapshot.data!;
+              const SizedBox(height: 12);
+              return Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 350.0,
+                    height: 60.0,
                     decoration: BoxDecoration(
-                      color: const Color(0xff0f4f2de),
-                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
                       border: Border.all(color: Colors.black, width: 1.5),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Sizes
-                        Text(
-                          'Here are the additional details about the product or measurement.',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                          textAlign: TextAlign.center,
+                    child: Center(
+                      child: Text(
+                        'Measurement History',
+                        style: GoogleFonts.inter(
+                          color: Colors.black,
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(height: 10.0),
-                        Row(
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(14),
+                      itemCount: records.length,
+                      itemBuilder: (context, index) {
+                        final m = records[index];
+
+                        final isExpanded = expandedId == m.appointmentId;
+                        final isUsed = usedMeasurementId == m.appointmentId;
+
+                        entryLists[m.appointmentId] ??= m.measurements.values
+                            .expand((group) => group.entries)
+                            .toList();
+                        final entries = entryLists[m.appointmentId]!;
+                        entryIndex[m.appointmentId] ??= entries.isNotEmpty
+                            ? 0
+                            : -1;
+
+                        if (entries.isEmpty) return const SizedBox.shrink();
+                        final i = entryIndex[m.appointmentId]!.clamp(
+                          0,
+                          entries.length - 1,
+                        );
+                        final currentEntry = entries[i];
+                        return Column(
                           children: [
-                            // Image box
                             Container(
-                              height: 150,
-                              width: 120,
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 10),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 border: Border.all(
                                   color: Colors.black,
                                   width: 1.5,
                                 ),
-                                image: DecorationImage(
-                                  image: AssetImage(
-                                    'assets/img/longsleeve.png',
-                                  ),
-                                  fit: BoxFit.scaleDown,
-                                ),
+                                boxShadow: isUsed
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.green.withOpacity(0.3),
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                        ),
+                                      ]
+                                    : [],
                               ),
-                            ),
+                              child: Row(
+                                children: [
+                                  FutureBuilder<String>(
+                                    future: imageCache[m.appointmentId] ??= m
+                                        .getSignedImage(0),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return Container(
+                                          height: 100,
+                                          width: 100,
+                                          color: Colors.grey.shade300,
+                                        );
+                                      }
 
-                            SizedBox(width: 10), // Optional spacing
-                            Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      height: 40,
-                                      width: 90,
-                                      color: const Color(0xFFD9D9D9),
-                                    ),
-                                    SizedBox(width: 5),
-                                    Container(
-                                      height: 40,
-                                      width: 90,
-                                      color: const Color(0xFFD9D9D9),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    Container(
-                                      height: 40,
-                                      width: 90,
-                                      color: const Color(0xFFD9D9D9),
-                                    ),
-                                    SizedBox(width: 5),
-                                    Container(
-                                      height: 40,
-                                      width: 90,
-                                      color: const Color(0xFFD9D9D9),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 5),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    // Left Arrow Container with Gesture
-                                    GestureDetector(
-                                      onTap: () {
-                                        // Your left navigation logic here
-                                        print('Navigate Left');
-                                      },
-                                      child: Container(
-                                        height: 30,
-                                        width: 40,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          border: Border.all(
-                                            color: Colors.black,
-                                            width: 1.5,
-                                          ),
+                                      final img = snapshot.data;
+                                      if (img == null || img.isEmpty) {
+                                        return const Icon(
+                                          Icons.checkroom,
+                                          size: 70,
+                                          color: Colors.black,
+                                        );
+                                      }
+
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Image.network(
+                                          img,
+                                          height: 80,
+                                          width: 80,
+                                          fit: BoxFit.cover,
                                         ),
-                                        child: const Icon(
-                                          Icons.arrow_left,
-                                          size: 20,
-                                        ),
+                                      );
+                                    },
+                                  ),
+
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      "Used For\n${m.usedFor.toUpperCase()}",
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
                                       ),
                                     ),
-                                    SizedBox(width: 70),
-                                    GestureDetector(
-                                      onTap: () {
-                                        // Your right navigation logic here
-                                        print('Navigate Right');
-                                      },
-                                      child: Container(
-                                        height: 30,
-                                        width: 40,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          border: Border.all(
-                                            color: Colors.black,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.arrow_right,
-                                          size: 20,
+                                  ),
+                                  Column(
+                                    children: [
+                                      _styledButton(
+                                        text: isExpanded
+                                            ? "Hide Details"
+                                            : "Details",
+                                        onTap: () => setState(
+                                          () => expandedId = isExpanded
+                                              ? null
+                                              : m.appointmentId,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        
-                        SizedBox(height: 20),
-                        // Notes
-                        Text(
-                          'Notes',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 16,
-                            fontStyle: FontStyle.italic,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        Container(
-                          height: 120,
-                          width: 360,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD9D9D9),
-                            border: Border.all(color: Colors.black, width: 1.5),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              'Note: Handle with care. Do not expose to direct sunlight.',
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                                color: Colors.black,
+                                      const SizedBox(height: 6),
+                                      _styledButton(
+                                        text: "Used This",
+                                        onTap: () {
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (context) {
+                                              return Dialog(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    20,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                    color: Color(0xFF758694),
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        "Do you want to use this measurement?",
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style:
+                                                            GoogleFonts.jetBrainsMono(
+                                                              fontSize: 16,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 20,
+                                                      ),
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceEvenly,
+                                                        children: [
+                                                          TextButton(
+                                                            onPressed: () {
+                                                              Navigator.of(
+                                                                context,
+                                                              ).pop();
+                                                              Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                  builder: (_) => AppointmentFormPage(
+                                                                    customerId:
+                                                                        widget
+                                                                            .customerId,
+                                                                    usedMeasurementId:
+                                                                        m.appointmentId,
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            },
+                                                            style: TextButton.styleFrom(
+                                                              backgroundColor:
+                                                                  Color(
+                                                                    0xFF557A46,
+                                                                  ),
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    vertical: 8,
+                                                                    horizontal:
+                                                                        20,
+                                                                  ),
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      6,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                            child: Text(
+                                                              "Yes",
+                                                              style: GoogleFonts.jetBrainsMono(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: Colors
+                                                                    .black,
+                                                              ),
+                                                            ),
+                                                          ),
+
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                  context,
+                                                                ).pop(),
+                                                            style: TextButton.styleFrom(
+                                                              backgroundColor:
+                                                                  Color(
+                                                                    0xFFD83F31,
+                                                                  ),
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    vertical: 8,
+                                                                    horizontal:
+                                                                        20,
+                                                                  ),
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      6,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                            child: Text(
+                                                              "No",
+                                                              style: GoogleFonts.jetBrainsMono(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: Colors
+                                                                    .black,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                      ],
+                            if (isExpanded)
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF4F2DE),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      "Details",
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        FutureBuilder<String>(
+                                          future: m.getSignedImage(0),
+                                          builder: (context, snapshot) {
+                                            final img = snapshot.data;
+                                            return ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              child:
+                                                  img != null && img.isNotEmpty
+                                                  ? Image.network(
+                                                      img,
+                                                      height: 110,
+                                                      width: 110,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                  : Container(
+                                                      height: 110,
+                                                      width: 110,
+                                                      alignment:
+                                                          Alignment.center,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors
+                                                            .grey
+                                                            .shade200,
+                                                        border: Border.all(
+                                                          color: Colors.black,
+                                                        ),
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.checkroom,
+                                                        size: 50,
+                                                      ),
+                                                    ),
+                                            );
+                                          },
+                                        ),
+
+                                        const SizedBox(width: 14),
+
+                                        // Measurement Box
+                                        Expanded(
+                                          child: Container(
+                                            padding: const EdgeInsets.all(14),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: Colors.black,
+                                                width: 1.3,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                Text(
+                                                  currentEntry.key
+                                                      .toUpperCase(),
+                                                  style:
+                                                      GoogleFonts.jetBrainsMono(
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        fontSize: 14,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  currentEntry.value
+                                                      .toUpperCase(),
+                                                  style:
+                                                      GoogleFonts.jetBrainsMono(
+                                                        fontSize: 13,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 12),
+
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        _navChip(
+                                          icon: Icons.arrow_left,
+                                          onTap: () {
+                                            final list =
+                                                entryLists[m.appointmentId]!;
+                                            setState(() {
+                                              entryIndex[m.appointmentId] =
+                                                  (entryIndex[m
+                                                          .appointmentId]! -
+                                                      1 +
+                                                      list.length) %
+                                                  list.length;
+                                            });
+                                          },
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "${entryIndex[m.appointmentId]! + 1}/${entryLists[m.appointmentId]!.length}",
+                                          style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _navChip(
+                                          icon: Icons.arrow_right,
+                                          onTap: () {
+                                            final list =
+                                                entryLists[m.appointmentId]!;
+                                            setState(() {
+                                              entryIndex[m.appointmentId] =
+                                                  (entryIndex[m
+                                                          .appointmentId]! +
+                                                      1) %
+                                                  list.length;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 16),
+
+                                    // Notes
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        "Notes",
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        border: Border.all(
+                                          color: Colors.black,
+                                          width: 1.3,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        m.notes.isNotEmpty
+                                            ? m.notes
+                                            : "No notes available",
+                                        style: GoogleFonts.jetBrainsMono(
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                  crossFadeState: _showDetails
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  duration: Duration(milliseconds: 300),
-                ),
-
-                SizedBox(height: 10.0),
-
-                // Container(
-                //   width: 350.0,
-                //   height: 130.0,
-                //   decoration: BoxDecoration(
-                //     color: Colors.white,
-                //     border: Border.all(color: Colors.black, width: 1.5),
-                //   ),
-                //   child: Row(
-                //     children: [
-                //       Padding(
-                //         padding: const EdgeInsets.all(8.0),
-                //         child: Image.asset(
-                //           'assets/img/pants.png',
-                //           width: 60,
-                //           height: 80,
-                //           fit: BoxFit.cover,
-                //         ),
-                //       ),
-                //       Expanded(
-                //         child: Padding(
-                //           padding: const EdgeInsets.symmetric(
-                //             vertical: 16.0,
-                //             horizontal: 8.0,
-                //           ),
-                //           child: Column(
-                //             crossAxisAlignment: CrossAxisAlignment.start,
-                //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //             children: [
-                //               Column(
-                //                 crossAxisAlignment: CrossAxisAlignment.start,
-                //                 children: [
-                //                   Text(
-                //                     'Used For',
-                //                     style: GoogleFonts.jetBrainsMono(
-                //                       fontWeight: FontWeight.bold,
-                //                       fontSize: 16,
-                //                     ),
-                //                   ),
-                //                   SizedBox(height: 4),
-                //                   Text(
-                //                     'Alterations of Pants',
-                //                     style: GoogleFonts.jetBrainsMono(
-                //                       fontSize: 14,
-                //                       fontWeight: FontWeight.bold,
-                //                     ),
-                //                   ),
-                //                 ],
-                //               ),
-                //             ],
-                //           ),
-                //         ),
-                //       ),
-                //       Padding(
-                //         padding: const EdgeInsets.only(right: 8.0),
-                //         child: Column(
-                //           mainAxisAlignment: MainAxisAlignment.center,
-                //           children: [
-                //             TextButton(
-                //               onPressed: () {
-                //                 setState(() {
-                //                   // _showDetails = !_showDetails;
-                //                 });
-                //               },
-                //               style: TextButton.styleFrom(
-                //                 backgroundColor: const Color(0xFFD9D9D9),
-                //                 padding: EdgeInsets.symmetric(
-                //                   vertical: 12.0,
-                //                   horizontal: 20.0,
-                //                 ),
-                //                 shape: RoundedRectangleBorder(
-                //                   borderRadius: BorderRadius.circular(8.0),
-                //                   side: BorderSide(
-                //                     color: Colors.black,
-                //                     width: 1.5,
-                //                   ),
-                //                 ),
-                //               ),
-                //               child: Text(
-                //                 _showDetails ? 'Hide Details' : 'Details',
-                //                 style: GoogleFonts.jetBrainsMono(
-                //                   fontSize: 14,
-                //                   fontWeight: FontWeight.bold,
-                //                   color: Colors.black,
-                //                 ),
-                //               ),
-                //             ),
-                //             SizedBox(height: 8),
-                //             TextButton(
-                //               onPressed: () {
-                //                 showDialog(
-                //                   context: context,
-                //                   builder: (ctx) => AlertDialog(
-                //                     backgroundColor: const Color(0xFFC7D9DD),
-                //                     shape: RoundedRectangleBorder(
-                //                       borderRadius: BorderRadius.circular(15),
-                //                     ),
-                //                     content: ConstrainedBox(
-                //                       constraints: BoxConstraints(
-                //                         maxHeight: 100,
-                //                         maxWidth: 400,
-                //                       ),
-                //                       child: Center(
-                //                         child: Padding(
-                //                           padding: const EdgeInsets.symmetric(
-                //                             vertical: 8.0,
-                //                           ),
-                //                           child: Text(
-                //                             "Do you want to use this measurement for the new product project?",
-                //                             style: GoogleFonts.jetBrainsMono(
-                //                               fontSize: 15,
-                //                               fontWeight: FontWeight.bold,
-                //                             ),
-                //                             textAlign: TextAlign.center,
-                //                           ),
-                //                         ),
-                //                       ),
-                //                     ),
-                //                     actionsPadding: EdgeInsets.symmetric(
-                //                       horizontal: 16,
-                //                     ),
-                //                     actions: <Widget>[
-                //                       Row(
-                //                         mainAxisAlignment:
-                //                             MainAxisAlignment.spaceEvenly,
-                //                         children: [
-                //                           TextButton(
-                //                             style: TextButton.styleFrom(
-                //                               backgroundColor: const Color(
-                //                                 0xFF819067,
-                //                               ),
-                //                               shape: RoundedRectangleBorder(
-                //                                 borderRadius:
-                //                                     BorderRadius.circular(8),
-                //                               ),
-                //                               padding: EdgeInsets.symmetric(
-                //                                 horizontal: 20,
-                //                                 vertical: 10,
-                //                               ),
-                //                             ),
-                //                             onPressed: () {
-                //                               Navigator.of(ctx).pop(true);
-                //                             },
-                //                             child: Text(
-                //                               "Yes",
-                //                               style: GoogleFonts.jetBrainsMono(
-                //                                 color: Colors.black,
-                //                                 fontWeight: FontWeight.bold,
-                //                               ),
-                //                             ),
-                //                           ),
-                //                           TextButton(
-                //                             style: TextButton.styleFrom(
-                //                               backgroundColor: const Color(
-                //                                 0xFFD25D5D,
-                //                               ),
-                //                               shape: RoundedRectangleBorder(
-                //                                 borderRadius:
-                //                                     BorderRadius.circular(8),
-                //                               ),
-                //                               padding: EdgeInsets.symmetric(
-                //                                 horizontal: 20,
-                //                                 vertical: 10,
-                //                               ),
-                //                             ),
-                //                             onPressed: () {
-                //                               Navigator.of(ctx).pop(false);
-                //                             },
-                //                             child: Text(
-                //                               "No",
-                //                               style: GoogleFonts.jetBrainsMono(
-                //                                 color: Colors.black,
-                //                                 fontWeight: FontWeight.bold,
-                //                               ),
-                //                             ),
-                //                           ),
-                //                         ],
-                //                       ),
-                //                     ],
-                //                   ),
-                //                 );
-                //               },
-                //               style: TextButton.styleFrom(
-                //                 backgroundColor: const Color(0xFFD9D9D9),
-                //                 padding: EdgeInsets.symmetric(
-                //                   vertical: 12.0,
-                //                   horizontal: 20.0,
-                //                 ),
-                //                 shape: RoundedRectangleBorder(
-                //                   borderRadius: BorderRadius.circular(8.0),
-                //                   side: BorderSide(
-                //                     color: Colors.black,
-                //                     width: 1.5,
-                //                   ),
-                //                 ),
-                //               ),
-                //               child: Text(
-                //                 'Used This',
-                //                 style: GoogleFonts.jetBrainsMono(
-                //                   fontSize: 14,
-                //                   fontWeight: FontWeight.bold,
-                //                   color: Colors.black,
-                //                 ),
-                //               ),
-                //             ),
-                //           ],
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
-
-                // AnimatedCrossFade(
-                //   firstChild: SizedBox.shrink(),
-                //   secondChild: Container(
-                //     height: 400,
-                //     width: 350,
-                //     margin: EdgeInsets.only(top: 8),
-                //     padding: EdgeInsets.all(12),
-                //     decoration: BoxDecoration(
-                //       color: const Color(0xFF0F4F2DE),
-                //       borderRadius: BorderRadius.circular(8),
-                //       border: Border.all(color: Colors.black, width: 1.5),
-                //     ),
-                //     child: Column(
-                //       crossAxisAlignment: CrossAxisAlignment.start,
-                //       children: [
-                //         // Sizes
-                //         Text(
-                //           'Here are the additional details about the product or measurement.',
-                //           style: GoogleFonts.jetBrainsMono(
-                //             fontSize: 13,
-                //             fontWeight: FontWeight.bold,
-                //             color: Colors.black87,
-                //           ),
-                //           textAlign: TextAlign.center,
-                //         ),
-                //         SizedBox(height: 10.0),
-                //         Row(
-                //           children: [
-                //             // Image box
-                //             Container(
-                //               height: 150,
-                //               width: 120,
-                //               decoration: BoxDecoration(
-                //                 color: Colors.white,
-                //                 border: Border.all(
-                //                   color: Colors.black,
-                //                   width: 1.5,
-                //                 ),
-                //                 image: DecorationImage(
-                //                   image: AssetImage('assets/img/pants.png'),
-                //                   fit: BoxFit.scaleDown,
-                //                 ),
-                //               ),
-                //             ),
-
-                //             SizedBox(width: 10), // Optional spacing
-                //             Column(
-                //               children: [
-                //                 Row(
-                //                   children: [
-                //                     Container(
-                //                       height: 40,
-                //                       width: 90,
-                //                       color: const Color(0xFFD9D9D9),
-                //                     ),
-                //                     SizedBox(width: 5),
-                //                     Container(
-                //                       height: 40,
-                //                       width: 90,
-                //                       color: const Color(0xFFD9D9D9),
-                //                     ),
-                //                   ],
-                //                 ),
-                //                 SizedBox(height: 5),
-                //                 Row(
-                //                   children: [
-                //                     Container(
-                //                       height: 40,
-                //                       width: 90,
-                //                       color: const Color(0xFFD9D9D9),
-                //                     ),
-                //                     SizedBox(width: 5),
-                //                     Container(
-                //                       height: 40,
-                //                       width: 90,
-                //                       color: const Color(0xFFD9D9D9),
-                //                     ),
-                //                   ],
-                //                 ),
-                //                 SizedBox(height: 5),
-                //                 Row(
-                //                   mainAxisAlignment:
-                //                       MainAxisAlignment.spaceBetween,
-                //                   children: [
-                //                     // Left Arrow Container with Gesture
-                //                     GestureDetector(
-                //                       onTap: () {
-                //                         // Your left navigation logic here
-                //                         print('Navigate Left');
-                //                       },
-                //                       child: Container(
-                //                         height: 30,
-                //                         width: 40,
-                //                         decoration: BoxDecoration(
-                //                           color: Colors.white,
-                //                           border: Border.all(
-                //                             color: Colors.black,
-                //                             width: 1.5,
-                //                           ),
-                //                         ),
-                //                         child: const Icon(
-                //                           Icons.arrow_left,
-                //                           size: 20,
-                //                         ),
-                //                       ),
-                //                     ),
-                //                     SizedBox(width: 70),
-                //                     // Right Arrow Container with Gesture
-                //                     GestureDetector(
-                //                       onTap: () {
-                //                         // Your right navigation logic here
-                //                         print('Navigate Right');
-                //                       },
-                //                       child: Container(
-                //                         height: 30,
-                //                         width: 40,
-                //                         decoration: BoxDecoration(
-                //                           color: Colors.white,
-                //                           border: Border.all(
-                //                             color: Colors.black,
-                //                             width: 1.5,
-                //                           ),
-                //                         ),
-                //                         child: const Icon(
-                //                           Icons.arrow_right,
-                //                           size: 20,
-                //                         ),
-                //                       ),
-                //                     ),
-                //                   ],
-                //                 ),
-                //               ],
-                //             ),
-                //           ],
-                //         ),
-                //         SizedBox(height: 20),
-                //         // Notes
-                //         Text(
-                //           'Notes',
-                //           style: GoogleFonts.jetBrainsMono(
-                //             fontSize: 16,
-                //             fontStyle: FontStyle.italic,
-                //             fontWeight: FontWeight.bold,
-                //             color: Colors.black,
-                //           ),
-                //         ),
-                //         Container(
-                //           height: 120,
-                //           width: 360,
-                //           decoration: BoxDecoration(
-                //             color: const Color(0xFFD9D9D9),
-                //             border: Border.all(color: Colors.black, width: 1.5),
-                //           ),
-                //           child: Padding(
-                //             padding: const EdgeInsets.all(8.0),
-                //             child: Text(
-                //               'Pwede ba lagyan ng bulaklakin na embroidery sa tuhod banda.',
-                //               style: GoogleFonts.jetBrainsMono(
-                //                 fontSize: 12,
-                //                 fontStyle: FontStyle.italic,
-                //                 color: Colors.black,
-                //               ),
-                //             ),
-                //           ),
-                //         ),
-                //         SizedBox(height: 10),
-                //       ],
-                //     ),
-                //   ),
-                //   crossFadeState: _showDetails
-                //       ? CrossFadeState.showSecond
-                //       : CrossFadeState.showFirst,
-                //   duration: Duration(milliseconds: 300),
-                // ),
-                SizedBox(height: 20.0),
-              ],
-            ),
+                ],
+              );
+            },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _styledButton({required String text, required VoidCallback onTap}) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        backgroundColor: const Color(0xFFD9D9D9),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: const BorderSide(color: Colors.black, width: 1.4),
+        ),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.jetBrainsMono(
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          color: Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _navChip({required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.black, width: 1.2),
+          color: Colors.white,
+        ),
+        child: Icon(icon, size: 24, color: Colors.black),
       ),
     );
   }

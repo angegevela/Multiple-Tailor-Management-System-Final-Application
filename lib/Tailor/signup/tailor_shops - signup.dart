@@ -1,14 +1,16 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:threadhub_system/Pages/home_page.dart';
+import 'package:threadhub_system/Pages/login_page.dart';
 import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
 import 'package:threadhub_system/Tailor/signup/terms&conditions.dart';
 import 'package:threadhub_system/Tailor/signup/upload_media.dart';
+import 'package:geocoding/geocoding.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 
 class TailorSignUpPage extends StatefulWidget {
   final String role;
@@ -34,7 +36,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
   bool _ownerName = false;
   bool _businessNumber = false;
   bool _address = false;
-  final bool _numEmployee = false;
+  // final bool _numEmployee = false;
   bool _password = false;
   bool _confirmPass = false;
 
@@ -61,6 +63,12 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
     _rememberMe = widget.acceptedTerms;
   }
 
+  String hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
   Future<void> signUp() async {
     setState(() {
       _shopNamer = _shopnameController.text.trim().isEmpty;
@@ -83,19 +91,26 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
     }
 
     if (!_rememberMe) {
+      if (!mounted) return;
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => const AlertDialog(
           title: Text('Terms & Conditions'),
           content: Text(
             'You must agree to the terms and conditions to continue.',
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
-            ),
-          ],
+        ),
+      );
+      return;
+    }
+
+    if (_passwordController.text.trim().length < 6) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => const AlertDialog(
+          title: Text('Weak Password'),
+          content: Text('Password must be at least 6 characters long.'),
         ),
       );
       return;
@@ -103,85 +118,244 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
     if (_passwordController.text.trim() !=
         _confirmpasswordController.text.trim()) {
+      if (!mounted) return;
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => const AlertDialog(
           title: Text('Error'),
           content: Text('Passwords do not match.'),
-          actions: [
-            TextButton(
-              child: Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
         ),
       );
       return;
     }
 
-    String email = _emailController.text.trim();
-    if (email.isEmpty) {
-      email =
-          '${_usernameController.text.trim().toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}@example.com';
+    if (_emailController.text.trim().isEmpty) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => const AlertDialog(
+          title: Text('Email Required'),
+          content: Text('Please provide an email to sign up securely.'),
+        ),
+      );
+      return;
     }
 
-    UserCredential userCredential = await FirebaseAuth.instance
-        .createUserWithEmailAndPassword(
-          email: email,
-          password: _passwordController.text.trim(),
+    try {
+      final email = _emailController.text.trim();
+
+      final emailQuery = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      if (emailQuery.docs.isNotEmpty) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) => const AlertDialog(
+            title: Text('Email Error'),
+            content: Text('This email is already registered.'),
+          ),
         );
+        return;
+      }
 
-    final user = userCredential.user;
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: email,
+            password: _passwordController.text.trim(),
+          );
 
-    if (user != null) {
+      if (!mounted) return;
+
+      final user = userCredential.user;
+      if (user == null) return;
+
       final supabase = Supabase.instance.client;
-      List<String> permitUrls = [];
+      final permitUrls = <String>[];
 
       if (_businessPermitFiles != null && _businessPermitFiles!.isNotEmpty) {
+        final storage = supabase.storage.from('Tailor');
+        final existingFiles = await storage.list(path: 'Permits');
+
+        if (!mounted) return;
+
         for (final file in _businessPermitFiles!) {
           final filePath = file.file.path;
+          if (filePath == null) continue;
+          final fileName = filePath.split('/').last;
 
-          if (filePath == null) {
-            continue;
+          if (existingFiles.any((f) => f.name == fileName)) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'File "$fileName" already exists. It will be renamed.',
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
           }
 
-          final fileName = filePath.split('/').last;
-          final path = 'Permits/$fileName';
+          final uniqueFileName =
+              '${DateTime.now().millisecondsSinceEpoch}_$fileName';
+          final path = 'Permits/$uniqueFileName';
 
-          await supabase.storage.from('Tailor').upload(path, File(filePath));
-          final publicUrl = supabase.storage.from('Tailor').getPublicUrl(path);
-          permitUrls.add(publicUrl);
+          try {
+            await storage.upload(path, File(filePath));
+            final publicUrl = storage.getPublicUrl(path);
+            permitUrls.add(publicUrl);
+          } catch (e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to upload "$fileName": $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
       }
 
-      await FirebaseFirestore.instance.collection('Users').doc(user.uid).set({
+      final fullAddress =
+          '${_addressController.text.trim()}, Puerto Princesa City, 5300, Philippines';
+      GeoPoint? geoPoint;
+      try {
+        final locations = await locationFromAddress(fullAddress);
+        if (locations.isNotEmpty) {
+          geoPoint = GeoPoint(
+            locations.first.latitude,
+            locations.first.longitude,
+          );
+        }
+      } catch (_) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) => const AlertDialog(
+            title: Text('Invalid Address'),
+            content: Text(
+              'We couldn’t find this location. Please include street and barangay.',
+            ),
+          ),
+        );
+      }
+
+      final userData = {
         'role': 'Tailor',
         'shopName': _shopnameController.text.trim(),
         'username': _usernameController.text.trim().toLowerCase(),
         'ownerName': _ownerNameController.text.trim(),
-        'businessNumber': '+63${_businessNumberController.text.trim()}',
+        'businessNumber': int.parse(_businessNumberController.text.trim()),
         'email': email,
         'address': _addressController.text.trim(),
-        'numberEmployees':
-            int.tryParse(_numberEmployeesController.text.trim()) ?? 0,
+        'fullAddress': fullAddress,
         'businessPermits': permitUrls,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+        'passwordHash': hashPassword(_passwordController.text.trim()),
+      };
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => TailorHomePage()),
-        );
+      if (geoPoint != null) userData['location'] = geoPoint;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sign up successful! Welcome to ThreadHub 🎉'),
-            backgroundColor: Colors.blueGrey,
-            duration: Duration(seconds: 6),
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .set(userData);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your profile was created successfully.')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const TailorHomePage(showAccepted: true),
+        ),
+      );
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        );
+          elevation: 10,
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle_outline, color: Colors.green, size: 60),
+                const SizedBox(height: 15),
+                Text(
+                  'Sign Up Successful',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Welcome to ThreadHub',
+                  style: TextStyle(fontSize: 16, color: Colors.black54),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Text(
+                      'Okay',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      String message;
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'This email is already registered.';
+          break;
+        case 'invalid-email':
+          message = 'The email address is not valid.';
+          break;
+        case 'weak-password':
+          message = 'Password is too weak.';
+          break;
+        default:
+          message = e.message ?? 'An unknown error occurred.';
       }
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Sign Up Error'),
+          content: Text(message),
+        ),
+      );
     }
   }
 
@@ -212,7 +386,6 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
             color: Colors.black,
           ),
         ),
-        centerTitle: true,
         backgroundColor: const Color(0xFF6082B6),
       ),
       backgroundColor: const Color(0xFFD9D9D9),
@@ -422,7 +595,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                         border: InputBorder.none,
                         filled: true,
                         fillColor: Color(0xFFE1EBEE),
-                        labelText: 'Optional',
+                        labelText: 'email@example.com',
                         contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(
@@ -550,53 +723,6 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                                 : Colors.grey[700],
                           ),
                           textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Number of Employees
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Number of Employees',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _numberEmployeesController,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        filled: true,
-                        fillColor: const Color(0xFFE1EBEE),
-                        labelText:
-                            'Enter the number of person operates the business',
-                        errorText: _numEmployee
-                            ? 'Number of Employee is required'
-                            : null,
-                        contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 2.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
                         ),
                       ),
                     ),
@@ -789,7 +915,10 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => HomePage()),
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            LoginPage(showRegisterPage: () {}),
+                      ),
                     );
                   },
                   child: Container(

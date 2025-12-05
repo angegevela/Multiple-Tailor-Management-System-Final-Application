@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/menu.dart';
 
 class UsersPage extends StatefulWidget {
@@ -13,144 +16,76 @@ class _UsersPageState extends State<UsersPage> {
   String searchQuery = "";
   String filterBy = "All";
   final List<String> filters = ["Customer", "Tailor", "Administrator"];
-
   String? selectedUserName;
-  bool showDetails = false;
 
-  final List<Map<String, String>> users = [
-    {
-      "name": "Gali Alcantara",
-      "type": "Customer",
-      "function": "View Orders",
-      "lastUsed": "2025-09-13 14:30",
-    },
-    {
-      "name": "Kuzmic",
-      "type": "Tailor",
-      "function": "Update Profile",
-      "lastUsed": "2025-09-12 09:15",
-    },
-    {
-      "name": "Developer Zalid",
-      "type": "Customer",
-      "function": "Export Data",
-      "lastUsed": "2025-09-11 18:40",
-    },
-    {
-      "name": "Alice Doe",
-      "type": "Customer",
-      "function": "Browse Catalog",
-      "lastUsed": "2025-09-10 11:20",
-    },
-    {
-      "name": "Alilie Garcia",
-      "type": "Customer",
-      "function": "Request More Tailor",
-      "lastUsed": "2025-09-09 12:00",
-    },
-    {
-      "name": "Kyro Permaran",
-      "type": "Customer",
-      "function": "Place Order",
-      "lastUsed": "2025-09-08 16:45",
-    },
-    {
-      "name": "Giana Gabrielo",
-      "type": "Customer",
-      "function": "View Orders",
-      "lastUsed": "2025-09-07 13:25",
-    },
-    {
-      "name": "Paul Reese",
-      "type": "Tailor",
-      "function": "Accept Job",
-      "lastUsed": "2025-09-06 08:30",
-    },
-    {
-      "name": "Tesa Paez",
-      "type": "Tailor",
-      "function": "Update Measurements",
-      "lastUsed": "2025-09-05 15:10",
-    },
-    {
-      "name": "Alex De Guzman",
-      "type": "Tailor",
-      "function": "Upload Design",
-      "lastUsed": "2025-09-04 17:50",
-    },
-    {
-      "name": "Alen Santos",
-      "type": "Tailor",
-      "function": "Update Availability",
-      "lastUsed": "2025-09-03 10:05",
-    },
-    {
-      "name": "Al Baguinda",
-      "type": "Tailor",
-      "function": "Respond to Request",
-      "lastUsed": "2025-09-02 09:55",
-    },
-    {
-      "name": "Ferdinand Adlawan",
-      "type": "Tailor",
-      "function": "Edit Portfolio",
-      "lastUsed": "2025-09-01 19:40",
-    },
-    {
-      "name": "Jacinto Mendoza",
-      "type": "Customer",
-      "function": "Browse Catalog",
-      "lastUsed": "2025-08-31 14:10",
-    },
-    {
-      "name": "Denniz Mendoza",
-      "type": "Customer",
-      "function": "Place Order",
-      "lastUsed": "2025-08-30 12:20",
-    },
-    {
-      "name": "Jacinto Ash Ketchum",
-      "type": "Customer",
-      "function": "Export Data",
-      "lastUsed": "2025-08-29 20:00",
-    },
-    {
-      "name": "Angi Gabelo",
-      "type": "Administrator",
-      "function": "Manage Users",
-      "lastUsed": "2025-09-14 09:00",
-    },
-    {
-      "name": "Lukas Jabier",
-      "type": "Administrator",
-      "function": "System Audit",
-      "lastUsed": "2025-08-28 08:45",
-    },
-  ];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  List<Map<String, String>> getFilteredUsers() {
-    final q = searchQuery.trim().toLowerCase();
-    return users.where((user) {
-      final matchesFilter = filterBy == "All" || user['type'] == filterBy;
-      final matchesSearch =
-          q.isEmpty ||
-          user['name']!.toLowerCase().contains(q) ||
-          user['type']!.toLowerCase().contains(q);
-      return matchesFilter && matchesSearch;
-    }).toList();
+  Stream<List<Map<String, dynamic>>> getUsersStream() {
+    final usersStream = _firestore.collection('Users').snapshots().map((snap) {
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        final role = data['role'] ?? '';
+        String name = '';
+
+        if (role == 'Tailor') {
+          name = data['ownerName'] ?? data['username'] ?? 'Unknown Tailor';
+        } else if (role == 'Customer') {
+          final firstName = data['firstName'] ?? '';
+          final surname = data['surname'] ?? '';
+          name = (firstName + ' ' + surname).trim();
+          if (name.isEmpty) name = data['username'] ?? 'Unknown Customer';
+        }
+
+        return {'id': doc.id, 'name': name, 'type': role};
+      }).toList();
+    });
+
+    final adminsStream = _firestore.collection('admins').snapshots().map((
+      snap,
+    ) {
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        final adminName =
+            data['adminName'] ?? data['username'] ?? 'Unknown Administrator';
+        return {'id': doc.id, 'name': adminName, 'type': 'Administrator'};
+      }).toList();
+    });
+
+    return Rx.combineLatest2<
+      List<Map<String, dynamic>>,
+      List<Map<String, dynamic>>,
+      List<Map<String, dynamic>>
+    >(usersStream, adminsStream, (users, admins) => [...users, ...admins]);
   }
 
-  void _deleteSelected() {
+  void _deleteSelected() async {
     if (selectedUserName == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No user selected to delete')),
       );
       return;
     }
-    setState(() {
-      users.removeWhere((u) => u['name'] == selectedUserName);
-      selectedUserName = null;
-    });
+
+    try {
+      final snapshot = await _firestore
+          .collection('Users')
+          .where('username', isEqualTo: selectedUserName)
+          .get();
+
+      for (var doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      setState(() => selectedUserName = null);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User deleted successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error deleting user: $e')));
+    }
   }
 
   @override
@@ -161,8 +96,6 @@ class _UsersPageState extends State<UsersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredUsers = getFilteredUsers();
-
     return Scaffold(
       appBar: AppBar(backgroundColor: const Color(0xFF6082B6)),
       drawer: const Menu(),
@@ -195,10 +128,7 @@ class _UsersPageState extends State<UsersPage> {
 
               const SizedBox(height: 13),
               Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.zero,
-                ),
+                decoration: const BoxDecoration(color: Colors.white),
                 child: Column(
                   children: [
                     Padding(
@@ -223,8 +153,6 @@ class _UsersPageState extends State<UsersPage> {
                           ),
 
                           const SizedBox(width: 8),
-
-                          //Filter dropdown
                           PopupMenuButton<String>(
                             offset: const Offset(0, 40),
                             color: Colors.transparent,
@@ -300,10 +228,9 @@ class _UsersPageState extends State<UsersPage> {
                               ),
                             ),
                           ),
-
                           const SizedBox(width: 8),
 
-                          //Search field
+                          // Search bar
                           Expanded(
                             child: Container(
                               height: 40,
@@ -325,9 +252,7 @@ class _UsersPageState extends State<UsersPage> {
                                   border: InputBorder.none,
                                 ),
                                 onChanged: (value) {
-                                  setState(() {
-                                    searchQuery = value;
-                                  });
+                                  setState(() => searchQuery = value);
                                 },
                               ),
                             ),
@@ -338,184 +263,152 @@ class _UsersPageState extends State<UsersPage> {
 
                     const Divider(height: 0),
 
-                    //Users Summarize Table
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
-                      child: Row(
+                      child: const Row(
                         children: [
-                          if (!showDetails) ...[
-                            const Expanded(
-                              flex: 3,
-                              child: Text(
-                                "Name",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              "Name",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
                             ),
-                            Expanded(
-                              flex: 2,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    "User Type",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        showDetails = true;
-                                      });
-                                    },
-                                    child: const Icon(
-                                      Icons.chevron_right,
-                                      size: 25,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ],
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              "User Type",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
+                              textAlign: TextAlign.center,
                             ),
-                          ] else ...[
-                            const Expanded(
-                              flex: 3,
-                              child: Text(
-                                "Function Used",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    "Last Used",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        showDetails = false;
-                                      });
-                                    },
-                                    child: const Icon(
-                                      Icons.chevron_left,
-                                      size: 25,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
+
                     const Divider(height: 0),
 
-                    // Table rows
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredUsers.length,
-                      separatorBuilder: (_, __) => const Divider(height: 0),
-                      itemBuilder: (context, index) {
-                        final user = filteredUsers[index];
-                        final name = user['name'] ?? "-";
-                        final type = user['type'] ?? "-";
-                        final functionUsed = user['function'] ?? "-";
-                        final lastUsed = user['lastUsed'] ?? "-";
-                        final isSelected = selectedUserName == name;
-
-                        Color selectedTextbgColor;
-                        if (isSelected && type == "Tailor") {
-                          selectedTextbgColor = const Color(0xFF004D40);
-                        } else if (isSelected && type == "Administrator") {
-                          selectedTextbgColor = const Color(0xFF5682B1);
-                        } else if (isSelected) {
-                          selectedTextbgColor = Colors.grey.shade700;
-                        } else {
-                          selectedTextbgColor = index % 2 == 0
-                              ? Colors.white
-                              : Colors.grey[100]!;
+                    StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: getUsersStream(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
                         }
 
-                        final textStyle = TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                        );
+                        if (snapshot.hasError) {
+                          return Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              "Error loading users: ${snapshot.error}",
+                            ),
+                          );
+                        }
 
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              selectedUserName = selectedUserName == name
-                                  ? null
-                                  : name;
-                            });
+                        final users = snapshot.data ?? [];
+
+                        final filteredUsers = users.where((user) {
+                          final matchesFilter =
+                              filterBy == "All" || user['type'] == filterBy;
+                          final matchesSearch =
+                              searchQuery.isEmpty ||
+                              user['name'].toLowerCase().contains(
+                                searchQuery.toLowerCase(),
+                              );
+                          return matchesFilter && matchesSearch;
+                        }).toList();
+
+                        if (filteredUsers.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              searchQuery.isEmpty
+                                  ? 'No users available'
+                                  : 'No results for "$searchQuery"',
+                              style: const TextStyle(color: Colors.black54),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: filteredUsers.length,
+                          separatorBuilder: (_, __) => const Divider(height: 0),
+                          itemBuilder: (context, index) {
+                            final user = filteredUsers[index];
+                            final name = user['name'] ?? "-";
+                            final type = user['type'] ?? "-";
+                            final isSelected = selectedUserName == name;
+
+                            final rowColor = isSelected
+                                ? (type == "Tailor"
+                                      ? const Color(0xFF004D40)
+                                      : Colors.grey.shade700)
+                                : (index % 2 == 0
+                                      ? Colors.white
+                                      : Colors.grey[100]!);
+
+                            final textStyle = TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                            );
+
+                            return InkWell(
+                              onTap: () {
+                                setState(() {
+                                  selectedUserName = selectedUserName == name
+                                      ? null
+                                      : name;
+                                });
+                              },
+                              child: Container(
+                                color: rowColor,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 16,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        name,
+                                        style: GoogleFonts.archivo(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        type,
+                                        style: GoogleFonts.archivo(),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
                           },
-                          child: Container(
-                            color: selectedTextbgColor,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                            child: Row(
-                              children: [
-                                if (!showDetails) ...[
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(name, style: textStyle),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(type, style: textStyle),
-                                  ),
-                                ] else ...[
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(functionUsed, style: textStyle),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(lastUsed, style: textStyle),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
                         );
                       },
                     ),
-
-                    if (filteredUsers.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Text(
-                          searchQuery.isEmpty
-                              ? 'No users available'
-                              : 'No results for "${searchQuery.trim()}"',
-                          style: const TextStyle(color: Colors.black54),
-                        ),
-                      ),
                   ],
                 ),
               ),

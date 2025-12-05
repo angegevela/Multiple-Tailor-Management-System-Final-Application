@@ -53,7 +53,7 @@ class _CalendarHomeState extends State<CalendarHome> {
   }
 
   void _confirmAppointment(BuildContext context) {
-    final fontSize = context.watch<FontProvider>().fontSize;
+    final fontSize = context.read<FontProvider>().fontSize;
     if (appointmentDateTime != null && selectedTime != null) {
       Navigator.pop(context, {
         'appointmentDateTime': appointmentDateTime,

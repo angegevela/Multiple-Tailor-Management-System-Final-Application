@@ -1,11 +1,14 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:threadhub_system/Customer/signup/customer_homepage.dart';
 import 'package:threadhub_system/Customer/signup/terms&condition_customer.dart';
-import 'package:threadhub_system/Pages/home_page.dart';
-
+import 'package:threadhub_system/Pages/login_page.dart';
+import 'package:geocoding/geocoding.dart';
 
 class SignupRegister extends StatefulWidget {
   final String role;
@@ -14,7 +17,7 @@ class SignupRegister extends StatefulWidget {
   const SignupRegister({
     super.key,
     required this.role,
-    this.acceptedTerms = false, // Optional default
+    this.acceptedTerms = false,
   });
 
   @override
@@ -53,20 +56,51 @@ class _SignupRegisterState extends State<SignupRegister> {
     super.dispose();
   }
 
-  Future signUp() async {
-    //Terms and Conditions
-    if (!_rememberMe) {
+  //text controllers - signing up with empty textfield error
+  bool _validateTextFields() {
+    if (_firstnameController.text.trim().isEmpty ||
+        _surnameController.text.trim().isEmpty ||
+        _emailController.text.trim().isEmpty ||
+        _phonenumberController.text.trim().isEmpty ||
+        _addressController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty ||
+        _confirmpasswordController.text.trim().isEmpty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Terms & Conditions'),
-          content: Text(
+          title: Text("Missing Information. Required Field"),
+          content: Text(" Please fill in all required fields."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("Okay"),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future signUp() async {
+    // Check empty fields on this signup
+    if (!_validateTextFields()) return;
+
+    // Terms and Conditions
+    if (!_rememberMe) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Terms & Conditions'),
+          content: const Text(
             'You must agree to the terms and conditions to continue.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         ),
@@ -82,6 +116,8 @@ class _SignupRegisterState extends State<SignupRegister> {
           password: _passwordController.text.trim(),
         );
 
+        if (!mounted) return;
+
         // Add user details
         await addUserDetails(
           _firstnameController.text.trim(),
@@ -91,21 +127,25 @@ class _SignupRegisterState extends State<SignupRegister> {
           widget.role,
           _addressController.text.trim(),
           _usernameController.text.trim(),
+          _passwordController.text.trim(),
         );
+
+        if (!mounted) return;
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomePage()),
+          MaterialPageRoute(builder: (context) => const CustomerHomePage()),
         );
       } on FirebaseAuthException catch (e) {
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text("Registration Error"),
+            title: const Text("Registration Error"),
             content: Text(e.message ?? "Something went wrong."),
             actions: [
               TextButton(
-                child: Text("OK"),
+                child: const Text("Okay"),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -113,14 +153,15 @@ class _SignupRegisterState extends State<SignupRegister> {
         );
       }
     } else {
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Error'),
-          content: Text('Passwords do not match.'),
+          title: const Text('Error'),
+          content: const Text('Passwords do not match.'),
           actions: [
             TextButton(
-              child: Text("OK"),
+              child: const Text("Okay"),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
@@ -137,20 +178,95 @@ class _SignupRegisterState extends State<SignupRegister> {
     String role,
     String address,
     String username,
+    String password,
   ) async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      await FirebaseFirestore.instance.collection('Users').doc(user.uid).set({
+      String baseCity = "Puerto Princesa City, 5300, Philippines";
+      String fullAddress = "$address, $baseCity";
+
+      GeoPoint? geoPoint;
+
+      try {
+        List<Location> locations = await locationFromAddress(fullAddress);
+        if (locations.isNotEmpty) {
+          geoPoint = GeoPoint(
+            locations.first.latitude,
+            locations.first.longitude,
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Invalid Address"),
+            content: const Text(
+              "We couldn't find this location. Please include street and barangay in your address.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Okay'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Hash password before storing
+      final hashedPassword = sha256.convert(utf8.encode(password)).toString();
+
+      final Map<String, dynamic> userData = {
         'firstName': firstName,
         'surname': surname,
         'email': email,
         'phoneNumber': phoneNumber,
         'role': role,
         'address': address,
-        'username': username.toLowerCase(),
+        'fullAddress': fullAddress,
+        'username': username,
+        'passwordHash': hashedPassword,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (geoPoint != null) {
+        userData['location'] = geoPoint;
+      }
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(user.uid)
+            .set(userData);
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Firestore Error"),
+            content: const Text(
+              "There was an error saving your account. Please try again.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text("Okay"),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -160,7 +276,7 @@ class _SignupRegisterState extends State<SignupRegister> {
         _confirmpasswordController.text.trim();
   }
 
-  //Remember me checkbox - i agree with terms and conditions
+  // Remember me checkbox - i agree with terms and conditions
   bool _rememberMe = false;
   @override
   Widget build(BuildContext context) {
@@ -354,7 +470,7 @@ class _SignupRegisterState extends State<SignupRegister> {
                             border: InputBorder.none,
                             filled: true,
                             fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'example@email.com(Optional)',
+                            labelText: 'example@email.com',
                             contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
@@ -400,7 +516,7 @@ class _SignupRegisterState extends State<SignupRegister> {
                             border: InputBorder.none,
                             filled: true,
                             fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'e.g. +639012345678',
+                            labelText: 'e.g. 09012345678',
                             contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
@@ -647,7 +763,8 @@ class _SignupRegisterState extends State<SignupRegister> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => CustomerHomePage(),
+                          builder: (context) =>
+                              LoginPage(showRegisterPage: () {}),
                         ),
                       );
                     },

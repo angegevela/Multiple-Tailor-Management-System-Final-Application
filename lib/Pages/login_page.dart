@@ -37,11 +37,11 @@ class _LoginPageState extends State<LoginPage> {
       String password = passwordController.text.trim();
       String email = identifier;
 
-      // Check if user typed username instead of email
+      //Check if user typed username instead of email
       if (!identifier.contains('@')) {
         final snapshot = await FirebaseFirestore.instance
             .collection('Users')
-            .where('username', isEqualTo: identifier.toLowerCase())
+            .where('username', isEqualTo: identifier)
             .limit(1)
             .get();
 
@@ -103,7 +103,9 @@ class _LoginPageState extends State<LoginPage> {
       } else if (role == 'Tailor') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => TailorHomePage()),
+          MaterialPageRoute(
+            builder: (context) => TailorHomePage(showAccepted: true),
+          ),
         );
       } else {
         showDialog(

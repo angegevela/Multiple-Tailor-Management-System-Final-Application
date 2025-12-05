@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,11 +21,12 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
   String? _profileImageUrl;
   File? _imageFile;
 
-  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _ownerNameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _shopNameController = TextEditingController();
 
   bool _isLoading = true;
 
@@ -37,7 +38,6 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
 
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       setState(() => _isLoading = false);
       return;
@@ -52,12 +52,12 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
       if (doc.exists) {
         final data = doc.data()!;
         setState(() {
-          _fullNameController.text =
-              "${data['firstName'] ?? ''} ${data['surname'] ?? ''}";
+          _ownerNameController.text = data['ownerName'] ?? '';
           _usernameController.text = data['username'] ?? '';
-          _phoneController.text = data['phoneNumber']?.toString() ?? '';
+          _phoneController.text = data['businessNumber']?.toString() ?? '';
           _emailController.text = data['email'] ?? user.email ?? '';
           _addressController.text = data['address'] ?? '';
+          _shopNameController.text = data['shopName'] ?? '';
           _profileImageUrl = data['profileImageUrl'] ?? '';
         });
       }
@@ -69,68 +69,53 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
 
-    if (pickedFile == null) return;
-
-    final file = File(pickedFile.path);
+    final file = File(picked.path);
     setState(() => _imageFile = file);
 
+    final user = FirebaseAuth.instance.currentUser!;
+    final ext = file.path.split('.').last;
+    final path = 'pictures/${user.uid}.$ext';
+
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        debugPrint("Firebase user not found.");
-        return;
-      }
+      final bytes = await file.readAsBytes();
 
-      final userId = user.uid;
-      final fileExt = file.path.split('.').last;
-      final fileName = '$userId.$fileExt';
-      final filePath = 'pictures/$fileName';
-
-      debugPrint("Uploading to Supabase: $filePath");
-
-      // Upload to the correct bucket
       await Supabase.instance.client.storage
-          .from('profile-user')
-          .upload(filePath, file, fileOptions: const FileOptions(upsert: true));
+          .from('profile_pictures')
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
-      debugPrint("Upload complete.");
+      final url = Supabase.instance.client.storage
+          .from('profile_pictures')
+          .getPublicUrl(path);
+      final cacheBustedUrl = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
 
-      // Get the public URL
-      final publicUrl = Supabase.instance.client.storage
-          .from('profile-user')
-          .getPublicUrl(filePath);
+      await FirebaseFirestore.instance.collection('Users').doc(user.uid).update(
+        {'profileImageUrl': cacheBustedUrl},
+      );
 
-      debugPrint("Generated URL: $publicUrl");
+      setState(() => _profileImageUrl = cacheBustedUrl);
 
-      // Update Firestore
-      await FirebaseFirestore.instance.collection('Users').doc(userId).update({
-        'profileImageUrl': publicUrl,
-      });
-
-      debugPrint("Firestore updated with profileImageUrl.");
-
-      // Update state to show uploaded image
-      setState(() {
-        _profileImageUrl = publicUrl;
-        _imageFile = null; // remove temporary file
-      });
-    } catch (e, st) {
-      debugPrint("Upload error: $e");
-      debugPrint(st.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile picture updated successfully!")),
+      );
+    } catch (e) {
+      debugPrint('Upload error: $e');
     }
   }
 
   Future<void> _saveChanges() async {
-    final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    setState(() => _isLoading = true);
 
     try {
       await FirebaseFirestore.instance
@@ -138,37 +123,41 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
           .doc(user.uid)
           .update({
             'username': _usernameController.text.trim(),
-            'phoneNumber': _phoneController.text.trim(),
+            'businessNumber': _phoneController.text.trim(),
             'address': _addressController.text.trim(),
             'profileImageUrl': _profileImageUrl ?? '',
           });
 
-      await _loadUserData();
+      setState(() => _isLoading = false);
 
       if (!mounted) return;
 
-      showDialog(
+      final result = await showDialog<bool>(
         context: context,
-        barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: Text("Saved", style: TextStyle(fontSize: tailorfontSize)),
-          content: Text(
-            "Your changes have been saved.",
-            style: TextStyle(fontSize: tailorfontSize),
-          ),
+          title: const Text("Saved"),
+          content: const Text("Your changes have been saved successfully."),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text("Agree"),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("OK"),
             ),
           ],
         ),
       );
+
+      if (result == true && mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       debugPrint("Save error: $e");
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error saving changes. Please try again."),
+        ),
+      );
     }
   }
 
@@ -200,7 +189,6 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
             decoration: InputDecoration(
               hintText: hint ?? label,
               contentPadding: const EdgeInsets.all(12),
-
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(4),
                 borderSide: const BorderSide(color: Colors.black, width: 2.0),
@@ -222,11 +210,17 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
   @override
   Widget build(BuildContext context) {
     final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
+
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF262633),
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
+      backgroundColor: Color(0xFFD9D9D9),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -262,7 +256,7 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
                     bottom: 10,
                     right: 10,
                     child: GestureDetector(
-                      onTap: _pickImage,
+                      onTap: _pickAndUploadImage,
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: const BoxDecoration(
@@ -281,21 +275,32 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
               ),
             ),
             const SizedBox(height: 20),
+
+            _buildInputField(
+              label: 'Owner Name',
+              controller: _ownerNameController,
+              tailorfontSize: tailorfontSize,
+            ),
             _buildInputField(
               label: 'Username',
               controller: _usernameController,
               tailorfontSize: tailorfontSize,
             ),
             _buildInputField(
-              label: 'Phone Number',
+              label: 'Business Number',
               controller: _phoneController,
               tailorfontSize: tailorfontSize,
             ),
             _buildInputField(
-              label: 'Email Address',
-              hint: 'Optional',
+              label: 'Email',
               controller: _emailController,
               readOnly: true,
+              tailorfontSize: tailorfontSize,
+            ),
+
+            _buildInputField(
+              label: 'Shop Name',
+              controller: _shopNameController,
               tailorfontSize: tailorfontSize,
             ),
             _buildInputField(
@@ -306,6 +311,8 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
             ),
 
             const SizedBox(height: 25),
+
+            // Portfolio Button
             Center(
               child: Container(
                 width: 350,
@@ -328,32 +335,32 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
                         color: Colors.black,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.black),
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 2,
-                            offset: const Offset(1, 1),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TailorPortfoliopage(),
                           ),
-                        ],
-                      ),
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const TailorPortfoliopage(),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black),
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 2,
+                              offset: const Offset(1, 1),
                             ),
-                          );
-                        },
+                          ],
+                        ),
                         child: Row(
                           children: [
                             Text(
@@ -379,28 +386,9 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
                 ),
               ),
             ),
-            const SizedBox(height: 2),
-            // Image grid
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GridView.count(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                crossAxisCount: 3,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 0.6,
-                children: [
-                  Image.asset('assets/img/dress1.png', fit: BoxFit.cover),
-                  Image.asset('assets/img/dress2.png', fit: BoxFit.cover),
-                  Image.asset('assets/img/dress3.png', fit: BoxFit.cover),
-                  Image.asset('assets/img/dress5.png', fit: BoxFit.cover),
-                  Image.asset('assets/img/dress7jpg.png', fit: BoxFit.cover),
-                  Image.asset('assets/img/up.png', fit: BoxFit.cover),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
+
+            const SizedBox(height: 20),
+
             ElevatedButton(
               onPressed: _saveChanges,
               style: ElevatedButton.styleFrom(

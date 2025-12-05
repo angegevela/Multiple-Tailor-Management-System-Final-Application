@@ -1,16 +1,34 @@
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:threadhub_system/Customer/pages/Measurement%20Method/manual_measurement.dart';
 import 'package:threadhub_system/Customer/pages/calendar_appoint.dart';
 import 'package:threadhub_system/Customer/pages/customization.dart';
 import 'package:threadhub_system/Customer/pages/duedate_product.dart';
 import 'package:threadhub_system/Customer/pages/font_provider.dart';
+import 'package:threadhub_system/Customer/pages/product%20status/receipt/appointmentdata.dart';
+import 'package:threadhub_system/Customer/pages/product%20status/receipt/customer_receipt.dart';
+import 'package:path/path.dart' as p;
 
 class AppointmentFormPage extends StatefulWidget {
-  const AppointmentFormPage({super.key});
+  final Map<String, Map<String, String>> measurements;
+  final String? measurementType;
 
+  final String customerId;
+  final String? usedMeasurementId;
+
+  const AppointmentFormPage({
+    super.key,
+    this.measurements = const {},
+    this.measurementType,
+    required this.customerId,
+    this.usedMeasurementId,
+  });
   @override
   State<AppointmentFormPage> createState() => _AppointmentFormPageState();
 }
@@ -30,15 +48,68 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   final bool _hasBeenPressed = false;
   MeasurementType? _selectedType;
   String? _errorText;
-  // ignore: unused_element
-  void _bookNow() {
-    setState(() {
-      if (_selectedType == null) {
-        _errorText = 'Please select one of the measurement method';
-      } else {
-        _errorText = null;
+
+  //Customization
+  String? _customizationDescription;
+  List<String> _uploadedImages = [];
+
+  final List<String> _servicesoffered = [
+    "Alterations",
+    "Custom Tailoring",
+    "Repairs",
+    "Restyling",
+    "Embroidery and Monogramming",
+    "Bridal and Formal Wear Alterations",
+    "Uniform Tailoring",
+    "Garment Resizing",
+    "Clothing Dyeing",
+    "Custom Design and Alterations",
+    "Fitting Assistance",
+  ];
+
+  //Manual Measurement - Passing Data
+  String? _selectedService;
+  String? _measurementType;
+  String? _measurementTypeFromManual;
+
+  @override
+  void initState() {
+    super.initState();
+    _receivedMeasurements = widget.measurements;
+    _measurementType = widget.measurementType;
+
+    if (widget.usedMeasurementId != null) {
+      _loadUsedMeasurement();
+    }
+  }
+
+  //Load Old Measurements
+  Future<void> _loadUsedMeasurement() async {
+    if (widget.usedMeasurementId == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection("Appointment Forms")
+          .doc(widget.usedMeasurementId)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        final measurements = Map<String, Map<String, String>>.from(
+          (data['manualMeasurements'] ?? {}).map(
+            (k, v) => MapEntry(k, Map<String, String>.from(v)),
+          ),
+        );
+
+        setState(() {
+          _selectedType = MeasurementType.manual;
+          _receivedMeasurements = measurements;
+          _measurementTypeFromManual = data['manualMeasurementType'];
+        });
       }
-    });
+    } catch (e) {
+      debugPrint("Error loading used measurement: $e");
+    }
   }
 
   //Textfield Controllers
@@ -47,6 +118,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   final TextEditingController _garmentSpecController = TextEditingController();
   final TextEditingController _servicesController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
 
   @override
   void dispose() {
@@ -55,13 +127,90 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     _garmentSpecController.dispose();
     _servicesController.dispose();
     _messageController.dispose();
+    _quantityController.dispose();
+
     super.dispose();
   }
 
-  void submitForm() {
-    //for book now logic
+  //Firebase + Supabase Integration
+  Future<AppointmentData?> _saveAppointment() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = FirebaseAuth.instance.currentUser;
+
+      List<String> uploadedUrls = [];
+
+      // Upload files to Supabase
+      for (String filePath in _uploadedImages) {
+        final file = File(filePath);
+        if (!await file.exists()) {
+          debugPrint("File does not exist: $filePath");
+          continue;
+        }
+
+        final fileName = p.basename(filePath);
+        final bucketName = "customers_appointmentfile";
+        final storagePath =
+            "appointments/${DateTime.now().millisecondsSinceEpoch}_$fileName";
+
+        await supabase.storage.from(bucketName).upload(storagePath, file);
+
+        final publicUrl = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(storagePath);
+        uploadedUrls.add(publicUrl);
+      }
+
+      final docRef = FirebaseFirestore.instance
+          .collection("Appointment Forms")
+          .doc();
+
+      final appointmentData = AppointmentData(
+        appointmentId: docRef.id,
+        fullName: _fullNameController.text,
+        phoneNumber: int.tryParse(_phonenumberController.text.trim()),
+        garmentSpec: _garmentSpecController.text,
+        services: _servicesController.text,
+        quantity: int.tryParse(_quantityController.text),
+        customizationDescription: _customizationDescription,
+        uploadedImages: uploadedUrls,
+        message: _messageController.text,
+        appointmentDateTime: appointmentDateTime,
+        priority: priority,
+        dueDateTime: dueDateTime,
+        duepriority: duepriority,
+        measurementMethod: _selectedType == MeasurementType.assisted
+            ? "Assisted"
+            : _selectedType == MeasurementType.manual
+            ? "Manual"
+            : null,
+        manualMeasurements: _receivedMeasurements.isNotEmpty
+            ? _receivedMeasurements
+            : null,
+        manualMeasurementType: _measurementTypeFromManual,
+        customerId: user?.uid ?? "unknown",
+        tailorId: null,
+        tailorAssigned: null,
+      );
+      if (!RegExp(r'^[0-9]+$').hasMatch(_phonenumberController.text.trim())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Phone number should contain numbers only."),
+          ),
+        );
+        return null;
+      }
+      await docRef.set(appointmentData.toMap());
+
+      return appointmentData;
+    } catch (e) {
+      debugPrint("Error saving appointment: $e");
+      return null;
+    }
   }
 
+  Map<String, Map<String, String>> _receivedMeasurements = {};
+  bool _isloading = false;
   @override
   Widget build(BuildContext context) {
     final fontSize = context.watch<FontProvider>().fontSize;
@@ -88,7 +237,8 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                   child: Text(
                     'Schedule Your Appointment Today',
                     style: GoogleFonts.medulaOne(
-                      fontSize: fontSize,
+                      // fontSize: fontSize,
+                      fontSize: 24,
                       fontWeight: FontWeight.w300,
                     ),
                   ),
@@ -218,6 +368,53 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                     ],
                   ),
                 ),
+                SizedBox(height: 10),
+                //Quantity Of the Product
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quantity Of The Product',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _quantityController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: "Enter quantity",
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.fromLTRB(
+                            18,
+                            22,
+                            48,
+                            2,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 2.5,
+                            ),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
                 SizedBox(height: 10),
                 // Service/s availment
@@ -234,26 +431,35 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      TextField(
-                        controller: _servicesController,
+
+                      DropdownButtonFormField<String>(
+                        value: _selectedService,
+                        items: _servicesoffered.map((service) {
+                          return DropdownMenuItem(
+                            value: service,
+                            child: Text(service),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedService = value;
+                            _servicesController.text = value ?? '';
+                          });
+                        },
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
-                          labelText: 'e.g alterations, custom made, etc.',
-                          contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
+                          labelText: 'Choose a Service',
+                          labelStyle: TextStyle(
+                            color: Colors.black,
+                            fontSize: fontSize,
+                          ),
                           enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide(
                               color: Colors.black,
                               width: 1.5,
                             ),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 2.5,
-                            ),
-                            borderRadius: BorderRadius.circular(15),
                           ),
                         ),
                       ),
@@ -285,7 +491,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: Colors.black, width: 2),
+                          border: Border.all(color: Colors.black, width: 1.5),
                         ),
                         child: Row(
                           children: [
@@ -304,14 +510,23 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                 color: Colors.black,
                                 size: 25,
                               ),
-                              onPressed: () {
-                                Navigator.push(
+                              onPressed: () async {
+                                final customizationData = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         const CustomizationPage(),
                                   ),
                                 );
+
+                                if (customizationData != null) {
+                                  setState(() {
+                                    _customizationDescription =
+                                        customizationData["description"];
+                                    _uploadedImages =
+                                        customizationData["files"];
+                                  });
+                                }
                               },
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
@@ -322,6 +537,60 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                     ],
                   ),
                 ),
+
+                if (_customizationDescription != null ||
+                    _uploadedImages.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF9DC),
+                        border: Border.all(color: Colors.black, width: 1.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_customizationDescription != null &&
+                              _customizationDescription!.isNotEmpty)
+                            Text(
+                              "Customization: $_customizationDescription",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          if (_customizationDescription != null &&
+                              _customizationDescription!.isNotEmpty)
+                            const SizedBox(height: 8),
+
+                          if (_uploadedImages.isNotEmpty)
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _uploadedImages.map((path) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.zero,
+                                  child: Image.file(
+                                    File(path),
+                                    width: 140,
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 SizedBox(height: 10),
 
                 //Message Textfield
@@ -359,7 +628,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                 ),
 
                 SizedBox(height: 10),
-                // Select Date and Time for Appointment and Product
+                //Select Date and Time for Appointment and Product
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Column(
@@ -421,16 +690,36 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                                               CalendarHome(),
                                                         ),
                                                       );
-
                                                   if (result != null &&
                                                       result
                                                           is Map<
                                                             String,
                                                             dynamic
                                                           >) {
+                                                    DateTime
+                                                    selectedAppointment =
+                                                        result['appointmentDateTime'];
+
+                                                    if (dueDateTime != null &&
+                                                        selectedAppointment
+                                                            .isAfter(
+                                                              dueDateTime!,
+                                                            )) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            "Appointment date cannot be after the due date.",
+                                                          ),
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
+
                                                     setState(() {
                                                       appointmentDateTime =
-                                                          result['appointmentDateTime'];
+                                                          selectedAppointment;
                                                       priority =
                                                           result['priority'];
                                                     });
@@ -730,7 +1019,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                 setState(() {
                                   if (_selectedType ==
                                       MeasurementType.assisted) {
-                                    _selectedType = null; // unselect
+                                    _selectedType = null;
                                   } else {
                                     _selectedType = MeasurementType.assisted;
                                   }
@@ -771,20 +1060,25 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  if (_selectedType == MeasurementType.manual) {
-                                    _selectedType = null; // unselect
-                                  } else {
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ManualMeasurement(),
+                                  ),
+                                );
+
+                                if (result != null &&
+                                    result is Map<String, dynamic>) {
+                                  setState(() {
                                     _selectedType = MeasurementType.manual;
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            ManualMeasurement(),
-                                      ),
-                                    );
-                                  }
-                                });
+                                    _receivedMeasurements =
+                                        result["measurements"] ?? {};
+                                    _measurementTypeFromManual =
+                                        result["type"] ?? "";
+                                  });
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 minimumSize: const Size.fromHeight(48),
@@ -818,6 +1112,61 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                           ),
                         ],
                       ),
+                      if (_receivedMeasurements.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 3,
+                            vertical: 5,
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF9DC),
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Center(
+                                  child: Text(
+                                    "Saved Measurements",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+
+                                if (_measurementTypeFromManual != null &&
+                                    _measurementTypeFromManual!.isNotEmpty)
+                                  Center(
+                                    child: Text(
+                                      "Measurement Type: $_measurementTypeFromManual",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+
+                                const SizedBox(height: 8),
+
+                                ..._receivedMeasurements.entries.map((entry) {
+                                  return Text(
+                                    "${entry.key}: ${entry.value.entries.map((e) => "${e.key} - ${e.value}").join(", ")}",
+                                    style: const TextStyle(fontSize: 14),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -827,22 +1176,74 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                     SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: _isloading
+                            ? null
+                            : () async {
+                                if (_fullNameController.text.isEmpty ||
+                                    _phonenumberController.text.isEmpty ||
+                                    _garmentSpecController.text.isEmpty ||
+                                    _servicesController.text.isEmpty ||
+                                    _selectedType == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Please fill in all required fields.",
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                setState(() => _isloading = true);
+
+                                try {
+                                  final appointmentData =
+                                      await _saveAppointment();
+
+                                  if (appointmentData != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ReceiptPage(data: appointmentData),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Failed to save appointment. Try again later.",
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  setState(() => _isloading = false);
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
-                          minimumSize: Size(0, 45),
                           backgroundColor: const Color(0xFF6082B6),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(5),
                           ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: Text(
-                          'Confirm',
-                          style: GoogleFonts.cormorantSc(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
+                        child: _isloading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : Text(
+                                'Confirm',
+                                style: GoogleFonts.cormorantSc(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
                       ),
                     ),
                   ],

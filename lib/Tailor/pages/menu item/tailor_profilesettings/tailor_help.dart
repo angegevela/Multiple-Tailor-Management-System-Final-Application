@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/help%20center/chatbox.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_fontprovider.dart';
 
 class TailorHelpPage extends StatefulWidget {
@@ -284,16 +283,19 @@ class _TailorHelpPageState extends State<TailorHelpPage> {
                     _buildContactCard(
                       icon: Icons.headset_mic,
                       text: "Customer Services Assistance",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ChatPage()),
-                        );
-                      },
-                    ),
-                    _buildContactCard(
-                      icon: Icons.whatshot,
-                      text: "Technical Support Hotline",
+                      // onTap: () {
+                      //   Navigator.push(
+                      //     // context,
+                      //     // MaterialPageRoute(
+                      //     //   builder: (_) => ChatPage(
+                      //     //     chatId:
+                      //     //         "${tailorId}_${customerId}",
+                      //     //     currentUserId: tailorId,
+                      //     //     otherUserId: customerId,
+                      //     //   ),
+                      //     // ),
+                      //   );
+                      // },
                     ),
                     _buildContactCard(
                       icon: Icons.email,
@@ -301,7 +303,7 @@ class _TailorHelpPageState extends State<TailorHelpPage> {
                     ),
                     _buildContactCard(
                       icon: Icons.facebook,
-                      text: "www.facebook.com/developersname",
+                      text: "www.facebook.com/threadhub",
                     ),
                   ],
                 ),

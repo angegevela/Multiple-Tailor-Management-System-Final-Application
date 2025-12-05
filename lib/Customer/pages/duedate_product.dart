@@ -52,7 +52,7 @@ class _DueDateProductPageState extends State<DueDateProductPage> {
   }
 
   void _confirmAppointment(BuildContext context) {
-    final fontSize = context.watch<FontProvider>().fontSize;
+    final fontSize = context.read<FontProvider>().fontSize;
     if (dueDateTime != null && selectedTime != null) {
       Navigator.pop(context, {
         'dueDateTime': dueDateTime,
@@ -135,7 +135,7 @@ class _DueDateProductPageState extends State<DueDateProductPage> {
                 ],
               ),
               child: Text(
-                "Please select your preferred date and time appointment",
+                "Please select your preferred date and time for due date of the product",
                 style: GoogleFonts.songMyung(fontSize: fontSize),
               ),
             ),

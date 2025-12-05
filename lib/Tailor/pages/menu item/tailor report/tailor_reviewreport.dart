@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
 
 import 'tailor_reportpage.dart';
 
@@ -21,6 +24,61 @@ class TailorReviewReport extends StatelessWidget {
   bool isImageFile(String path) {
     final ext = path.split('.').last.toLowerCase();
     return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(ext);
+  }
+
+  Future<void> submitReport(BuildContext context) async {
+    final firestore = FirebaseFirestore.instance;
+    final supabase = Supabase.instance.client;
+
+    try {
+      final List<String> storedFileNames = [];
+
+      for (final file in uploadedFiles) {
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${file.file.name}';
+
+        final fileBytes = await File(file.filePath).readAsBytes();
+
+        await supabase.storage
+            .from('reports_uploads')
+            .uploadBinary(
+              'reports/$fileName',
+              fileBytes,
+              fileOptions: const FileOptions(upsert: true),
+            );
+        storedFileNames.add('reports/$fileName');
+      }
+
+      final reportRef = await firestore.collection('Reports').add({
+        'respondentName': respondentName,
+        'reporteeName': reporteeName,
+        'reportDescription': reportDescription,
+        'uploadedFiles': storedFileNames,
+        'status': 'No Action Yet',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      await firestore.collection('notifications').add({
+        'title': 'New Report Submitted',
+        'body': '$reporteeName has submitted a report against $respondentName.',
+        'reportId': reportRef.id,
+        'toAdmin': true,
+        'timestamp': FieldValue.serverTimestamp(),
+        'readBy': [],
+      });
+      final reportData = {
+        'respondentName': respondentName,
+        'reporteeName': reporteeName,
+        'reportDescription': reportDescription,
+        'uploadedFiles': storedFileNames,
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+      await firestore.collection('Reports').add(reportData);
+    } catch (e, s) {
+      debugPrint('submitReport failed: $e');
+      debugPrint('$s');
+      rethrow;
+    }
   }
 
   @override
@@ -108,54 +166,87 @@ class TailorReviewReport extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (BuildContext context) {
-                      return Dialog(
-                        backgroundColor: const Color(0xFFA6AEBF),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                'assets/gif/success.gif',
-                                height: 120,
-                              ),
-                              const SizedBox(height: 20),
-                              const Text(
-                                'Report submitted successfully!',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 20),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  Navigator.pop(context);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF2EED7),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: const Text('Confirm'),
-                              ),
-                            ],
+                    builder: (_) =>
+                        const Center(child: CircularProgressIndicator()),
+                  );
+
+                  try {
+                    await submitReport(context);
+
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+
+                    if (!context.mounted) return;
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext context) {
+                        return Dialog(
+                          backgroundColor: const Color(0xFFA6AEBF),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
                           ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  'assets/gif/success.gif',
+                                  height: 120,
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'Report submitted successfully!',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            TailorHomePage(showAccepted: false),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF2EED7),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: const Text('Confirm'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  } catch (e) {
+                    if (context.mounted) Navigator.pop(context);
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to submit report: $e'),
+                          backgroundColor: Colors.redAccent,
                         ),
                       );
-                    },
-                  );
+                    }
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6082B6),

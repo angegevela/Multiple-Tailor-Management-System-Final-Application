@@ -146,15 +146,19 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                       ),
                     ),
                     Text(
-                      "abc123@gmail.com",
-                      style: TextStyle(color: textColor),
-                    ),
-                    Text(
-                      "321@gmail.com",
+                      "developer1_threadhub@gmail.com",
                       style: TextStyle(color: textColor, fontSize: fontSize),
                     ),
                     Text(
-                      "yeah@gmail.com",
+                      "developer2_threadhub@gmail.com",
+                      style: TextStyle(color: textColor, fontSize: fontSize),
+                    ),
+                    Text(
+                      "developer3_threadhub@gmail.com",
+                      style: TextStyle(color: textColor, fontSize: fontSize),
+                    ),
+                    Text(
+                      "developer4_threadhub@gmail.com",
                       style: TextStyle(color: textColor, fontSize: fontSize),
                     ),
                   ],

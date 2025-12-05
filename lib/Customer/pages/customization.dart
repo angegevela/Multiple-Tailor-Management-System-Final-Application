@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:io';
@@ -52,18 +53,24 @@ class _CustomizationPageState extends State<CustomizationPage> {
   }
 
   Future<void> selectFile() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
-    if (result == null || result.files.isEmpty) return;
+    final ImagePicker picker = ImagePicker();
+    final List<XFile> images = await picker.pickMultiImage();
 
-    if (uploadedFiles.length + result.files.length > 20) {
+    if (images == null || images.isEmpty) return;
+
+    if (uploadedFiles.length + images.length > 20) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("You can upload a maximum of 20 files.")),
+        const SnackBar(content: Text("You can upload a maximum of 20 images.")),
       );
       return;
     }
 
-    for (var file in result.files) {
-      final upload = UploadFile(file, filePath: file.path ?? '');
+    for (var img in images) {
+      final file = File(img.path);
+      final upload = UploadFile(
+        PlatformFile(name: img.name, size: await file.length(), path: img.path),
+        filePath: img.path,
+      );
       setState(() {
         uploadedFiles.add(upload);
       });
@@ -127,6 +134,8 @@ class _CustomizationPageState extends State<CustomizationPage> {
             ),
           ),
           const SizedBox(height: 8),
+
+          // Description box
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -143,6 +152,7 @@ class _CustomizationPageState extends State<CustomizationPage> {
               maxLines: 4,
             ),
           ),
+
           const SizedBox(height: 16),
           Text(
             "File Upload",
@@ -152,6 +162,8 @@ class _CustomizationPageState extends State<CustomizationPage> {
             ),
           ),
           const SizedBox(height: 8),
+
+          //FILE UPLOAD CONTAINER
           Container(
             decoration: BoxDecoration(
               color: const Color(0xFFFFF9DC),
@@ -195,7 +207,6 @@ class _CustomizationPageState extends State<CustomizationPage> {
                       _wantsToUpload = true;
                     });
                   },
-
                   label: Text(
                     "Upload More?",
                     style: TextStyle(fontSize: fontSize),
@@ -222,6 +233,24 @@ class _CustomizationPageState extends State<CustomizationPage> {
           ),
 
           const SizedBox(height: 20),
+
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, {
+                "description": _customizationdescripController.text,
+                "files": uploadedFiles.map((f) => f.filePath).toList(),
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6082B6),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text("Done"),
+          ),
         ],
       ),
     );
@@ -241,7 +270,7 @@ class _CustomizationPageState extends State<CustomizationPage> {
       body: SafeArea(
         child: isConfirmed ? buildFinalPreview() : _buildCustomizationForm(),
       ),
-      bottomNavigationBar: _buildBottomBar(allUploaded),
+      bottomNavigationBar: isConfirmed ? null : _buildBottomBar(allUploaded),
     );
   }
 
@@ -270,25 +299,22 @@ class _CustomizationPageState extends State<CustomizationPage> {
                           color: Colors.white,
                         ),
                       ),
-
                       backgroundColor: Color(0xFF393E46),
                     ),
                   );
                   return;
                 }
 
-                setState(() => isConfirmed = true);
+                setState(() {
+                  isConfirmed = true;
+                });
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6082B6),
-                foregroundColor: Colors.black,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 30,
                   vertical: 12,
-                ),
-                textStyle: GoogleFonts.radioCanada(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.bold,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),

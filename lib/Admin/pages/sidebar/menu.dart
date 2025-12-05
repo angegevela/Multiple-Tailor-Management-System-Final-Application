@@ -1,21 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:threadhub_system/Admin/login/admin_homepage.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/appointment.dart';
-import 'package:threadhub_system/Admin/pages/sidebar/backup_restore.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/people.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/report_management.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:threadhub_system/Admin/login/admin_login.dart';
 
-
-class Menu extends StatelessWidget {
+class Menu extends StatefulWidget {
   const Menu({super.key});
+
+  @override
+  State<Menu> createState() => _MenuState();
+}
+
+class _MenuState extends State<Menu> {
+  // For hover tracking
+  int hoveredIndex = -1;
+
+  Widget menuItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    required void Function() onTap,
+  }) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => hoveredIndex = index),
+      onExit: (_) => setState(() => hoveredIndex = -1),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: hoveredIndex == index
+              ? const Color(0xFF19232F)
+              : const Color(0xFF334257),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: ListTile(
+          leading: Icon(icon, color: Colors.white),
+          title: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w400,
+              color: Colors.white,
+            ),
+          ),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: Color(0xFFD6E5FA),
+      backgroundColor: const Color(0xFFD6E5FA),
       width: 254,
-      child: ListView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             height: 50,
@@ -26,192 +67,69 @@ class Menu extends StatelessWidget {
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           ),
 
-          //Dashboard Menu Bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color(0xFF334257),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.dashboard, color: Colors.white),
-              title: Text(
-                'Dashboard',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        AdminHomePage(),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
-                        },
-                    transitionDuration: const Duration(
-                      milliseconds: 300,
-                    ), // Optional: adjust speed
-                  ),
-                );
-              },
-            ),
+          menuItem(
+            icon: Icons.calendar_month,
+            label: 'Appointments',
+            index: 0,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AdminAppointmentPage()),
+              );
+            },
           ),
 
-          //Appointment Menu Bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color(0xFF334257),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.calendar_month, color: Colors.white),
-              title: Text(
-                'Appointments',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                // navigate to SettingsPage...
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AppointmentPage()),
-                );
-              },
-            ),
+          menuItem(
+            icon: Icons.person,
+            label: 'People',
+            index: 1,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => UsersPage()),
+              );
+            },
           ),
 
-          //People Menu Bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color(0xFF334257),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.person, color: Colors.white),
-              title: Text(
-                'People',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                // navigate to
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => UsersPage()),
-                );
-              },
-            ),
+          menuItem(
+            icon: Icons.report,
+            label: 'Report Management',
+            index: 2,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ReportManagementPage()),
+              );
+            },
           ),
 
-          //Report Management Menu Bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color(0xFF334257),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.report, color: Colors.white),
-              title: Text(
-                'Report Management',
-                style: GoogleFonts.poppins(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                // navigate to Report Management Page
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ReportManagementPage(),
-                  ),
-                );
-              },
-            ),
+          const Spacer(),
+          menuItem(
+            icon: Icons.logout_sharp,
+            label: 'Logout',
+            index: 3,
+            onTap: () async {
+              Navigator.pop(context);
+
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.remove('isAdminLoggedIn');
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => AdminLoginPage()),
+                (route) => false,
+              );
+            },
           ),
 
-          //Backup and Restore Menu Bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color(0xFF334257),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              leading: const Icon(
-                Icons.restore_page_rounded,
-                color: Colors.white,
-              ),
-              title: Text(
-                'Backup And Restore',
-                style: GoogleFonts.poppins(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(
-                  context,
-                ); // Navigation to Go Back to Previous Page
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => BackupRestorePage()),
-                );
-              },
-            ),
-          ),
-
-          //Logout Menu Bar
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 320),
-            decoration: BoxDecoration(
-              color: Color(0xFF334257),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ListTile(
-              leading: const Icon(Icons.logout_sharp, color: Colors.white),
-              title: Text(
-                'Logout',
-                style: GoogleFonts.poppins(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                // navigate to SettingsPage...
-              },
-            ),
-          ),
+          const SizedBox(height: 10),
         ],
       ),
     );

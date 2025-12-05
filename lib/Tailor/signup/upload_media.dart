@@ -128,19 +128,31 @@ class _UploadMediaPageState extends State<UploadMediaPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Media Upload',
-                style: GoogleFonts.lato(
+                'Business Permit',
+                style: GoogleFonts.chauPhilomeneOne(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Media Upload',
+                  style: GoogleFonts.chauPhilomeneOne(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               const SizedBox(height: 5),
-              Text(
-                'Add your pictures, you can upload up to 20 files max.',
-                style: GoogleFonts.lato(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black54,
+              Center(
+                child: Text(
+                  'Add your pictures, you can upload up to 20 files max.',
+                  style: GoogleFonts.lato(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black54,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -193,8 +205,6 @@ class _UploadMediaPageState extends State<UploadMediaPage> {
               ),
 
               const SizedBox(height: 20),
-
-              // Uploaded Files
               ...uploadedFiles.map((upload) {
                 final fileSizeInMB = upload.file.size / (1024 * 1024);
                 final fileName = truncateFilename(upload.file.name, 25);
@@ -285,16 +295,16 @@ class _UploadMediaPageState extends State<UploadMediaPage> {
                                         height: 24,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: Colors.grey[350],
+                                          color: Colors.red.shade100,
                                           border: Border.all(
-                                            color: Colors.grey.shade500,
+                                            color: Colors.redAccent,
                                             width: 2,
                                           ),
                                         ),
                                         child: const Icon(
                                           Icons.close,
                                           size: 20,
-                                          color: Colors.black87,
+                                          color: Colors.red,
                                         ),
                                       ),
                                     ),
@@ -345,7 +355,7 @@ class _UploadMediaPageState extends State<UploadMediaPage> {
                 ),
                 textStyle: const TextStyle(fontSize: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(5),
                 ),
               ),
             ),
@@ -356,11 +366,14 @@ class _UploadMediaPageState extends State<UploadMediaPage> {
                 },
 
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
+                  backgroundColor: Color(0xFF6082B6),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 30,
                     vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
                   ),
                   textStyle: const TextStyle(fontSize: 16),
                 ),

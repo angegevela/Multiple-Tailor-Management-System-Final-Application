@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/admin_reportdetails/admincard_report.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/menu.dart';
-
 
 class ReportManagementPage extends StatefulWidget {
   const ReportManagementPage({super.key});
@@ -12,51 +12,6 @@ class ReportManagementPage extends StatefulWidget {
 }
 
 class _ReportManagementPageState extends State<ReportManagementPage> {
-  final List<Map<String, dynamic>> reports = [
-    {
-      "title": "Report 1",
-      "name": "Alice Doe",
-      "subtitle": "Network Issue causing frequent drops",
-      "details": "This report is about a network connectivity issue.",
-      "status": "No Action Yet",
-    },
-    {
-      "title": "Report 2",
-      "name": "Jhogelien Fowler",
-      "subtitle": "Login Failure (users can't sign in)",
-      "details": "User unable to login due to invalid credentials error.",
-      "status": "Pending Approval",
-    },
-    {
-      "title": "Report 3",
-      "name": "Cathlyne Gray",
-      "subtitle": "Data Mismatch in user table",
-      "details": "Database shows inconsistent records for users.",
-      "status": "Completed",
-    },
-    {
-      "title": "Report 4",
-      "name": "Angelina Lino",
-      "subtitle": "UI Bug: buttons misaligned on small screens",
-      "details": "Some buttons are misaligned on smaller screens.",
-      "status": "No Action Yet",
-    },
-    {
-      "title": "Report 5",
-      "name": "Joan Hevela",
-      "subtitle": "Payment Failure intermittently failing",
-      "details": "Payments are not being processed correctly.",
-      "status": "Pending Approval",
-    },
-    {
-      "title": "Report 6",
-      "name": "Sasa Mia",
-      "subtitle": "Crash on Launch on Android 11",
-      "details": "App crashes immediately after starting.",
-      "status": "Completed",
-    },
-  ];
-
   Color getStatusColor(String status) {
     switch (status) {
       case "No Action Yet":
@@ -77,7 +32,6 @@ class _ReportManagementPageState extends State<ReportManagementPage> {
     const Color(0xFFA4B787),
     const Color(0xFF30475E),
     const Color(0xFF4F8A8B),
-    const Color(0xFF4F8A8B),
   ];
 
   @override
@@ -85,114 +39,134 @@ class _ReportManagementPageState extends State<ReportManagementPage> {
     return Scaffold(
       appBar: AppBar(backgroundColor: const Color(0xFF6082B6)),
       drawer: const Menu(),
+      backgroundColor: Color(0xFFD9D9D9),
       body: SafeArea(
-        child: GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.57,
-          ),
-          itemCount: reports.length,
-          itemBuilder: (context, index) {
-            final report = reports[index];
-            final statusColor = getStatusColor(report["status"]);
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('Reports')
+              .orderBy('timestamp', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-            return InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ReportDetailPage(report: reports[index]),
-                  ),
-                );
-              },
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
-                    Container(
-                      height: 150,
-                      width: double.infinity,
-                      color: cardColors[index % cardColors.length],
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(child: Text('No reports available.'));
+            }
+
+            final reports = snapshot.data!.docs;
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.45,
+              ),
+              itemCount: reports.length,
+              itemBuilder: (context, index) {
+                final data = reports[index].data() as Map<String, dynamic>;
+                final String reportee = data['reporteeName'] ?? 'Unknown';
+                final String respondent = data['respondentName'] ?? 'N/A';
+                final String status = data['status'] ?? "No Action Yet";
+
+                return InkWell(
+
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      constraints: const BoxConstraints(minHeight: 120),
-                      color: Colors.white,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Report Status:",
-                            style: GoogleFonts.sometypeMono(
-                              fontWeight: FontWeight.w900,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                          Text(
-                            reports[index]["name"],
-                            style: GoogleFonts.sometypeMono(
-                              fontWeight: FontWeight.w900,
-                              fontStyle: FontStyle.italic,
-                              fontSize: 13.5,
-                            ),
-                          ),
-                          Text(
-                            reports[index]["status"],
-                            style: GoogleFonts.sometypeMono(
-                              color: getStatusColor(reports[index]["status"]),
-                              fontWeight: FontWeight.w900,
-                              fontStyle: FontStyle.italic,
-                              fontSize: 11.5,
-                            ),
-                          ),
-
-                          //Icons row at bottom
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    elevation: 4,
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          height: 160,
+                          color: cardColors[index % cardColors.length],
+                        ),
+                        Flexible(
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                IconButton(
-                                  icon: const Icon(Icons.info),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ReportDetailPage(
-                                          report: reports[index],
-                                        ),
+                                Column(
+                                  children: [
+                                    Text(
+                                      "Reportee: $reportee",
+                                      style: GoogleFonts.robotoMono(
+                                        fontWeight: FontWeight.bold,
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 13,
                                       ),
-                                    );
-                                  },
+                                      textAlign: TextAlign.center,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Respondent: $respondent",
+                                      style: GoogleFonts.robotoMono(
+                                        fontWeight: FontWeight.w700,
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 12,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Status: $status",
+                                      style: GoogleFonts.robotoMono(
+                                        color: getStatusColor(status),
+                                        fontWeight: FontWeight.w900,
+                                        fontStyle: FontStyle.italic,
+                                        fontSize: 11.5,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.report_off),
-                                  onPressed: () {
-                                    // handle action
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () {
-                                    // handle delete
-                                  },
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.info),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ReportDetailPage(report: data),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () async {
+                                        await FirebaseFirestore.instance
+                                            .collection('Reports')
+                                            .doc(reports[index].id)
+                                            .delete();
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         ),

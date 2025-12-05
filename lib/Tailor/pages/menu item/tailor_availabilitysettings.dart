@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_fontprovider.dart';
 
 class TailorAvailabilitySettings extends StatefulWidget {
@@ -26,6 +29,8 @@ class _TailorAvailabilitySettingsState
   List<String> _selectedDays = [];
   bool _isAvailable = true;
 
+  final TextEditingController _assignedToController = TextEditingController();
+
   //Days dropdown state
   bool _isDayDropdownOpen = false;
   final LayerLink _dayLayerLink = LayerLink();
@@ -40,10 +45,20 @@ class _TailorAvailabilitySettingsState
   final GlobalKey _timeDropdownKey = GlobalKey();
   OverlayEntry? _timeOverlayEntry;
 
+  void _safeInsertOverlay(OverlayEntry? entry) {
+    if (entry == null) return;
+    final overlay = Overlay.of(context);
+    if (!mounted) return;
+    overlay.insert(entry);
+  }
+
+  final TextEditingController _numberofCustomerController =
+      TextEditingController();
   @override
   void initState() {
     super.initState();
     _generateTimeslots();
+    _loadData();
   }
 
   void _generateTimeslots() {
@@ -83,7 +98,7 @@ class _TailorAvailabilitySettingsState
       _dayOverlayEntry?.remove();
     } else {
       _dayOverlayEntry = _createDayOverlay();
-      Overlay.of(context).insert(_dayOverlayEntry!);
+      _safeInsertOverlay(_dayOverlayEntry);
     }
     setState(() {
       _isDayDropdownOpen = !_isDayDropdownOpen;
@@ -91,7 +106,8 @@ class _TailorAvailabilitySettingsState
   }
 
   OverlayEntry _createDayOverlay() {
-    final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
+    final tailorfontSize = context.read<TailorFontprovider>().fontSize;
+
     RenderBox renderBox =
         _dayDropdownKey.currentContext!.findRenderObject() as RenderBox;
     Size size = renderBox.size;
@@ -122,6 +138,7 @@ class _TailorAvailabilitySettingsState
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: tailorfontSize,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     activeColor: Colors.white,
@@ -134,10 +151,9 @@ class _TailorAvailabilitySettingsState
                         } else {
                           _selectedDays.remove(day);
                         }
-                        // Rebuild the overlay to reflect the changes
                         _dayOverlayEntry?.remove();
                         _dayOverlayEntry = _createDayOverlay();
-                        Overlay.of(context).insert(_dayOverlayEntry!);
+                        _safeInsertOverlay(_dayOverlayEntry);
                       });
                     },
                   );
@@ -169,10 +185,9 @@ class _TailorAvailabilitySettingsState
                         onTap: () {
                           setState(() {
                             _selectedDays = List.from(_days);
-
                             _dayOverlayEntry?.remove();
                             _dayOverlayEntry = _createDayOverlay();
-                            Overlay.of(context).insert(_dayOverlayEntry!);
+                            _safeInsertOverlay(_dayOverlayEntry);
                           });
                         },
                         child: Text(
@@ -220,14 +235,14 @@ class _TailorAvailabilitySettingsState
       _isTimeDropdownOpen = false;
     } else {
       _timeOverlayEntry = _createTimeOverlay();
-      Overlay.of(context, rootOverlay: true).insert(_timeOverlayEntry!);
+      _safeInsertOverlay(_timeOverlayEntry);
       _isTimeDropdownOpen = true;
     }
     setState(() {});
   }
 
   OverlayEntry _createTimeOverlay() {
-    final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
+    final tailorfontSize = context.read<TailorFontprovider>().fontSize;
     RenderBox renderBox =
         _timeDropdownKey.currentContext!.findRenderObject() as RenderBox;
     Size size = renderBox.size;
@@ -292,9 +307,10 @@ class _TailorAvailabilitySettingsState
     "Bridal and Formal Wear Alterations",
     "Uniform Tailoring",
     "Garment Resizing",
-    "Clothing Dyeing",
-    "Custome Design and Alterations",
-    "Fitting Assistance",
+    "Custom Design and Alterations",
+    "Formal Wear Rental",
+    "Clothing Rental",
+    "Dress Rental",
   ];
 
   List<String> _selectedServicesOffered = [];
@@ -308,7 +324,7 @@ class _TailorAvailabilitySettingsState
       _serviceOverlayEntry?.remove();
     } else {
       _serviceOverlayEntry = _createServiceOverlay();
-      Overlay.of(context).insert(_serviceOverlayEntry!);
+      _safeInsertOverlay(_serviceOverlayEntry);
     }
     setState(() {
       _isServicesdropdownopen = !_isServicesdropdownopen;
@@ -316,11 +332,15 @@ class _TailorAvailabilitySettingsState
   }
 
   OverlayEntry _createServiceOverlay() {
-    final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
+    final tailorfontSize = context.read<TailorFontprovider>().fontSize;
     RenderBox renderBox =
         _serviceDropdownKey.currentContext!.findRenderObject() as RenderBox;
     Size size = renderBox.size;
     Offset offset = renderBox.localToGlobal(Offset.zero);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final overlayHeight = (_servicesoffered.length * 56.0) > screenHeight * 0.5
+        ? screenHeight * 0.5
+        : _servicesoffered.length * 56.0;
 
     return OverlayEntry(
       builder: (context) => Positioned(
@@ -366,7 +386,7 @@ class _TailorAvailabilitySettingsState
                             }
                             _serviceOverlayEntry?.remove();
                             _serviceOverlayEntry = _createServiceOverlay();
-                            Overlay.of(context).insert(_serviceOverlayEntry!);
+                            _safeInsertOverlay(_serviceOverlayEntry);
                           });
                         },
                       );
@@ -386,9 +406,7 @@ class _TailorAvailabilitySettingsState
                                 _selectedServicesOffered.clear();
                                 _serviceOverlayEntry?.remove();
                                 _serviceOverlayEntry = _createServiceOverlay();
-                                Overlay.of(
-                                  context,
-                                ).insert(_serviceOverlayEntry!);
+                                _safeInsertOverlay(_serviceOverlayEntry);
                               });
                             },
                             child: Text(
@@ -433,12 +451,52 @@ class _TailorAvailabilitySettingsState
     );
   }
 
+  Future<void> _loadData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(user.uid)
+        .get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data();
+    if (data == null) return;
+
+    final availability = data['availability'] ?? {};
+
+    setState(() {
+      _isAvailable = availability['isAvailable'] ?? true;
+      _selectedDays = List<String>.from(availability['days'] ?? []);
+      _selectedTime = availability['timeSlot'];
+      _numberofCustomerController.text =
+          (availability['maxCustomersPerDay'] ?? '').toString();
+      _selectedServicesOffered = List<String>.from(
+        availability['servicesOffered'] ?? [],
+      );
+      _assignedToController.text = availability['assignedTo'] ?? '';
+    });
+  }
+
   @override
   void dispose() {
-    _dayOverlayEntry?.remove();
-    _timeOverlayEntry?.remove();
+    if (_dayOverlayEntry?.mounted ?? false) {
+      _dayOverlayEntry?.remove();
+    }
+    if (_timeOverlayEntry?.mounted ?? false) {
+      _timeOverlayEntry?.remove();
+    }
+    if (_serviceOverlayEntry?.mounted ?? false) {
+      _serviceOverlayEntry?.remove();
+    }
+    _numberofCustomerController.dispose();
+    _assignedToController.dispose();
     super.dispose();
   }
+
+  String _selectedRole = "Owner";
 
   @override
   Widget build(BuildContext context) {
@@ -479,7 +537,7 @@ class _TailorAvailabilitySettingsState
                 ),
                 const SizedBox(height: 10),
 
-                // Day dropdown
+                //Day dropdown
                 GestureDetector(
                   key: _dayDropdownKey,
                   onTap: _toggleDayDropdown,
@@ -611,13 +669,78 @@ class _TailorAvailabilitySettingsState
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+                Text(
+                  "Assigned To (Owner / Manager)",
+                  style: GoogleFonts.prompt(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 50,
+                  width: double.infinity,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 120,
+                          color: const Color(0xFFA2AF9B),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedRole,
+                              dropdownColor: const Color(0xFFB8C4A9),
+                              iconEnabledColor: const Color(0xFF0F2C59),
+                              items: ['Owner', 'Manager', 'Staff']
+                                  .map(
+                                    (role) => DropdownMenuItem(
+                                      value: role,
+                                      child: Text(
+                                        role,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Roboto',
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _selectedRole = value);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        Container(width: 1, color: Colors.grey.shade400),
+                        Expanded(
+                          child: Container(
+                            color: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: TextField(
+                              controller: _assignedToController,
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "Enter name (e.g., Toni Fowler)",
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
                 const SizedBox(height: 20),
-                // Customers + Toggle Row
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Customers input
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,8 +756,9 @@ class _TailorAvailabilitySettingsState
                           const SizedBox(height: 6),
                           SizedBox(
                             height: 50,
-                            width: 220,
+                            width: 200,
                             child: TextField(
+                              controller: _numberofCustomerController,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 contentPadding: const EdgeInsets.symmetric(
@@ -653,15 +777,14 @@ class _TailorAvailabilitySettingsState
                       ),
                     ),
 
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 15),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
-                          "Availability \nbutton",
+                          "Availability button",
                           style: GoogleFonts.prompt(
-                            // fontSize: 12,
-                            fontSize: tailorfontSize,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -693,10 +816,12 @@ class _TailorAvailabilitySettingsState
                                   _isAvailable = value;
                                 });
                               },
-                              activeColor: Colors.white,
-                              activeTrackColor: Colors.grey,
-                              inactiveThumbColor: Colors.white,
-                              inactiveTrackColor: Colors.grey,
+                              activeColor: Color(0xFF415E72),
+                              activeTrackColor: Color(0xFFA2AF9B),
+                              inactiveThumbColor: Colors.grey,
+                              inactiveTrackColor: Colors.blueGrey.withOpacity(
+                                0.5,
+                              ),
                             ),
                           ),
                         ),
@@ -709,7 +834,6 @@ class _TailorAvailabilitySettingsState
           ),
         ),
       ),
-      //Save Changes Container
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
@@ -718,15 +842,71 @@ class _TailorAvailabilitySettingsState
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF72A0C1),
               foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(
-                vertical: 14,
-              ), // taller button
+              padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () {
-              print("Save Changes clicked");
+            onPressed: () async {
+              final user = FirebaseAuth.instance.currentUser;
+              if (user == null) return;
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
+
+              try {
+                await FirebaseFirestore.instance
+                    .collection('Users')
+                    .doc(user.uid)
+                    .set({
+                      "availability": {
+                        "isAvailable": _isAvailable,
+                        "days": _selectedDays,
+                        "timeSlot": _selectedTime,
+                        "maxCustomersPerDay":
+                            int.tryParse(_numberofCustomerController.text) ?? 0,
+                        "servicesOffered": _selectedServicesOffered,
+                        "assignedTo": _assignedToController.text,
+                      },
+                    }, SetOptions(merge: true));
+
+                if (!mounted) return;
+
+                if (_dayOverlayEntry?.mounted ?? false) {
+                  _dayOverlayEntry?.remove();
+                }
+                if (_timeOverlayEntry?.mounted ?? false) {
+                  _timeOverlayEntry?.remove();
+                }
+                if (_serviceOverlayEntry?.mounted ?? false) {
+                  _serviceOverlayEntry?.remove();
+                }
+
+                Navigator.of(context, rootNavigator: true).pop();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Availability saved successfully!"),
+                  ),
+                );
+
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => const TailorProfileSettingsPage(),
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                Navigator.of(context, rootNavigator: true).pop();
+
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text("Error saving: $e")));
+              }
             },
             child: Text(
               "Confirm",

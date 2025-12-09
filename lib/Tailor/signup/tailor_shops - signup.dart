@@ -27,20 +27,20 @@ class TailorSignUpPage extends StatefulWidget {
 }
 
 class _TailorSignUpPageState extends State<TailorSignUpPage> {
+  // Boolean for Permit Uploading
   bool _businessPermitError = false;
   List<UploadFile>? _businessPermitFiles;
 
-  //Error States of textfields
+  // Error States of textfields
   bool _shopNamer = false;
   bool _username = false;
   bool _ownerName = false;
   bool _businessNumber = false;
   bool _address = false;
-  // final bool _numEmployee = false;
   bool _password = false;
   bool _confirmPass = false;
 
-  //TextFields
+  // Input TextFields
   final bool _validate = false;
   final TextEditingController _shopnameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
@@ -55,7 +55,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
   final TextEditingController _confirmpasswordController =
       TextEditingController();
 
-  //Remember Me
+  // Remember Me
   bool _rememberMe = false;
   @override
   void initState() {

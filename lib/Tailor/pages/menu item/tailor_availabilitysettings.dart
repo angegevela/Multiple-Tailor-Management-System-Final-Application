@@ -31,13 +31,25 @@ class _TailorAvailabilitySettingsState
 
   final TextEditingController _assignedToController = TextEditingController();
 
-  //Days dropdown state
+  // Working Hours Per Day
+  Map<String, Map<String, String?>> _workingHours = {
+    "Monday": {"start": null, "end": null},
+    "Tuesday": {"start": null, "end": null},
+    "Wednesday": {"start": null, "end": null},
+    "Thursday": {"start": null, "end": null},
+    "Friday": {"start": null, "end": null},
+    "Saturday": {"start": null, "end": null},
+    "Sunday": {"start": null, "end": null},
+  };
+
+  Map<String, bool> _expandedDays = {};
+  // Days Dropdown State
   bool _isDayDropdownOpen = false;
   final LayerLink _dayLayerLink = LayerLink();
   final GlobalKey _dayDropdownKey = GlobalKey();
   OverlayEntry? _dayOverlayEntry;
 
-  //Times dropdown state
+  // Times Dropdown State
   List<String> _timeslots = [];
   String? _selectedTime;
   bool _isTimeDropdownOpen = false;
@@ -57,33 +69,31 @@ class _TailorAvailabilitySettingsState
   @override
   void initState() {
     super.initState();
-    _generateTimeslots();
+
     _loadData();
   }
 
-  void _generateTimeslots() {
-    final starttime = TimeOfDay(hour: 7, minute: 0);
-    final endtime = TimeOfDay(hour: 21, minute: 0);
+  Future<void> _pickTime(String day, bool isStart) async {
+    final initial = TimeOfDay.now();
 
-    List<String> slots = [];
-    TimeOfDay current = starttime;
+    final TimeOfDay? result = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
 
-    while (_compareTime(current, endtime) <= 0) {
-      final hour = current.hourOfPeriod == 0 ? 12 : current.hourOfPeriod;
-      final minute = current.minute.toString().padLeft(2, '0');
-      final period = current.period == DayPeriod.am ? "AM" : "PM";
-      slots.add("$hour:$minute $period");
+    if (result == null) return;
 
-      int newMinute = current.minute + 30;
-      int newHour = current.hour;
-      if (newMinute >= 60) {
-        newMinute = 0;
-        newHour++;
+    final formatted =
+        "${result.hourOfPeriod.toString().padLeft(2, '0')}:${result.minute.toString().padLeft(2, '0')} "
+        "${result.period == DayPeriod.am ? "AM" : "PM"}";
+
+    setState(() {
+      if (isStart) {
+        _workingHours[day]!["start"] = formatted;
+      } else {
+        _workingHours[day]!["end"] = formatted;
       }
-      current = TimeOfDay(hour: newHour, minute: newMinute);
-    }
-
-    _timeslots = slots;
+    });
   }
 
   int _compareTime(TimeOfDay a, TimeOfDay b) {
@@ -92,7 +102,7 @@ class _TailorAvailabilitySettingsState
     return 1;
   }
 
-  //DAY DROPDOWN
+  // Day Dropdown
   void _toggleDayDropdown() {
     if (_isDayDropdownOpen) {
       _dayOverlayEntry?.remove();
@@ -105,6 +115,7 @@ class _TailorAvailabilitySettingsState
     });
   }
 
+  // Day Overlay Choices
   OverlayEntry _createDayOverlay() {
     final tailorfontSize = context.read<TailorFontprovider>().fontSize;
 
@@ -209,95 +220,7 @@ class _TailorAvailabilitySettingsState
     );
   }
 
-  //TIME DROPDOWN
-  final List<String> _timeSlots = [
-    "7:00 AM - 10:00 AM",
-    "7:00 AM - 11:00 AM",
-    "7:30 AM - 10:30 AM",
-    "7:30 AM - 11:30 AM",
-    "8:00 AM - 12:00 NN",
-    "8:30 AM - 12:00 NN",
-    "9:00 AM - 1:00 PM",
-    "9:30 AM - 1:30 PM",
-    "10:00 AM - 2:00 PM",
-    "1:30 PM - 5:30 PM",
-    "2:00 PM - 6:00 PM",
-    "2:30 PM - 6:30 PM",
-    "2:30 PM - 7:00 PM",
-    "3:00 PM - 7:30 PM",
-    "3:30 PM - 8:00 PM",
-    "4:00 PM - 08:30 PM",
-    "4:30 PM - 09:00 PM",
-  ];
-  void _toggleTimeDropdown() {
-    if (_isTimeDropdownOpen) {
-      _timeOverlayEntry?.remove();
-      _isTimeDropdownOpen = false;
-    } else {
-      _timeOverlayEntry = _createTimeOverlay();
-      _safeInsertOverlay(_timeOverlayEntry);
-      _isTimeDropdownOpen = true;
-    }
-    setState(() {});
-  }
-
-  OverlayEntry _createTimeOverlay() {
-    final tailorfontSize = context.read<TailorFontprovider>().fontSize;
-    RenderBox renderBox =
-        _timeDropdownKey.currentContext!.findRenderObject() as RenderBox;
-    Size size = renderBox.size;
-    Offset offset = renderBox.localToGlobal(Offset.zero);
-
-    return OverlayEntry(
-      builder: (context) => Positioned(
-        left: offset.dx,
-        top: offset.dy + size.height + 4,
-        width: size.width,
-        child: Material(
-          elevation: 4,
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            constraints: const BoxConstraints(maxHeight: 200),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3B5998),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: _timeSlots.length,
-              separatorBuilder: (_, __) =>
-                  const Divider(color: Colors.white24, thickness: 1, height: 1),
-              itemBuilder: (context, index) {
-                final slot = _timeSlots[index];
-                return ListTile(
-                  title: Center(
-                    child: Text(
-                      slot,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: tailorfontSize,
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'RobotoMono',
-                      ),
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                  onTap: () {
-                    setState(() {
-                      _selectedTime = slot;
-                    });
-                    _toggleTimeDropdown();
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  //Services Offered
+  // Services Offered
   final List<String> _servicesoffered = [
     "Alterations",
     "Custom Tailoring",
@@ -316,6 +239,7 @@ class _TailorAvailabilitySettingsState
   List<String> _selectedServicesOffered = [];
 
   bool _isServicesdropdownopen = false;
+  // Services Overlay Choices
   OverlayEntry? _serviceOverlayEntry;
   final GlobalKey _serviceDropdownKey = GlobalKey();
 
@@ -451,6 +375,7 @@ class _TailorAvailabilitySettingsState
     );
   }
 
+  // Load the picked choice unto the tailors/tailor shops profile
   Future<void> _loadData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -470,7 +395,11 @@ class _TailorAvailabilitySettingsState
     setState(() {
       _isAvailable = availability['isAvailable'] ?? true;
       _selectedDays = List<String>.from(availability['days'] ?? []);
-      _selectedTime = availability['timeSlot'];
+
+      final hours = availability['workingHours'] ?? {};
+      hours.forEach((day, map) {
+        _workingHours[day] = {"start": map["start"], "end": map["end"]};
+      });
       _numberofCustomerController.text =
           (availability['maxCustomersPerDay'] ?? '').toString();
       _selectedServicesOffered = List<String>.from(
@@ -496,6 +425,7 @@ class _TailorAvailabilitySettingsState
     super.dispose();
   }
 
+  // This is the standard role for handling the application - owner first.
   String _selectedRole = "Owner";
 
   @override
@@ -514,12 +444,10 @@ class _TailorAvailabilitySettingsState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                //Title/s
                 Center(
                   child: Text(
                     "Availability Settings",
                     style: GoogleFonts.prompt(
-                      // fontSize: 20,
                       fontSize: tailorfontSize,
                       fontWeight: FontWeight.w500,
                     ),
@@ -527,7 +455,7 @@ class _TailorAvailabilitySettingsState
                 ),
                 const SizedBox(height: 20),
 
-                //Availability
+                // Availability Text with Dropdown
                 Text(
                   "Availability",
                   style: GoogleFonts.prompt(
@@ -535,9 +463,9 @@ class _TailorAvailabilitySettingsState
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+
                 const SizedBox(height: 10),
 
-                //Day dropdown
                 GestureDetector(
                   key: _dayDropdownKey,
                   onTap: _toggleDayDropdown,
@@ -551,9 +479,8 @@ class _TailorAvailabilitySettingsState
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
+                        Expanded(
                           child: Text(
                             _selectedDays.isEmpty
                                 ? "Select day that apply"
@@ -562,9 +489,6 @@ class _TailorAvailabilitySettingsState
                               color: Colors.black87,
                               fontSize: tailorfontSize,
                             ),
-                            overflow: TextOverflow.visible,
-                            maxLines: 1,
-                            softWrap: true,
                           ),
                         ),
                         Icon(
@@ -579,50 +503,125 @@ class _TailorAvailabilitySettingsState
 
                 const SizedBox(height: 20),
 
-                //Time Hours
                 Text(
-                  "Time Hours",
+                  "Working Hours",
                   style: GoogleFonts.prompt(
                     fontSize: tailorfontSize,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+
                 const SizedBox(height: 10),
 
-                GestureDetector(
-                  key: _timeDropdownKey,
-                  onTap: _toggleTimeDropdown,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _selectedTime ?? "Select a time",
-                          style: TextStyle(
-                            color: Colors.black87,
-                            fontSize: tailorfontSize,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _selectedDays.map((day) {
+                    final start = _workingHours[day]!["start"];
+                    final end = _workingHours[day]!["end"];
+                    final isOpen = _expandedDays[day] ?? false;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.grey.shade400,
+                          width: 1,
+                        ),
+                      ),
+
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _expandedDays[day] = !(isOpen);
+                              });
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  day,
+                                  style: TextStyle(
+                                    fontSize: tailorfontSize,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                Icon(
+                                  isOpen
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Icon(
-                          _isTimeDropdownOpen
-                              ? Icons.arrow_drop_up
-                              : Icons.arrow_drop_down,
-                        ),
-                      ],
-                    ),
-                  ),
+
+                          if (isOpen) ...[
+                            const SizedBox(height: 10),
+
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => _pickTime(day, true),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                        horizontal: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        start ?? "Start time",
+                                        style: TextStyle(
+                                          fontSize: tailorfontSize,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(width: 10),
+
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => _pickTime(day, false),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                        horizontal: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade200,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        end ?? "End time",
+                                        style: TextStyle(
+                                          fontSize: tailorfontSize,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ),
                 const SizedBox(height: 20),
 
-                //Services Offered
+                // Services Offered Text with Dropdown
                 Text(
                   "Services Offered",
                   style: GoogleFonts.prompt(

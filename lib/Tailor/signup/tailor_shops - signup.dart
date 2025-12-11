@@ -57,6 +57,10 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
   // Remember Me
   bool _rememberMe = false;
+
+  // Selected Barangay
+  String? selectedBarangay;
+  bool _barangay = false;
   @override
   void initState() {
     super.initState();
@@ -78,6 +82,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
       _address = _addressController.text.trim().isEmpty;
       _password = _passwordController.text.trim().isEmpty;
       _confirmPass = _confirmpasswordController.text.trim().isEmpty;
+      _barangay = selectedBarangay == null;
     });
 
     if (_shopNamer ||
@@ -86,7 +91,8 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
         _businessNumber ||
         _address ||
         _password ||
-        _confirmPass) {
+        _confirmPass ||
+        _barangay) {
       return;
     }
 
@@ -219,7 +225,8 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
       }
 
       final fullAddress =
-          '${_addressController.text.trim()}, Puerto Princesa City, 5300, Philippines';
+          '${_addressController.text.trim()}, ${selectedBarangay ?? ""}, Puerto Princesa City, 5300, Philippines';
+
       GeoPoint? geoPoint;
       try {
         final locations = await locationFromAddress(fullAddress);
@@ -371,6 +378,146 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
     _passwordController.dispose();
     _confirmpasswordController.dispose();
     super.dispose();
+  }
+
+  // Barangay Overlay
+  final LayerLink _barangayLayerLink = LayerLink();
+  final GlobalKey _barangayKey = GlobalKey();
+  OverlayEntry? _barangayOverlayEntry;
+  bool _isBarangayDropdownOpen = false;
+
+  // List of Puerto Princesa City Barangays
+  final List<String> ppcBarangays = [
+    "Babuyan",
+    "Bagong Bayan",
+    "Bagong Pag-Asa",
+    "Bagong Silang",
+    "Bahile",
+    "Bancao-Bancao",
+    "Barangay ng mga Mangingisda",
+    "Binduyan",
+    "Buenavista",
+    "Cabayugan",
+    "Concepcion",
+    "Inagawan",
+    "Inagawan Sub-Colony",
+    "Irawan",
+    "Iwahig",
+    "Kalipay",
+    "Kamuning",
+    "Langogan",
+    "Liwanag",
+    "Lucbuan",
+    "Luzviminda",
+    "Mabuhay",
+    "Macarascas",
+    "Magkakaibigan",
+    "Maligaya",
+    "Manalo",
+    "Mandaragat",
+    "Manggahan",
+    "Maningning",
+    "Maoyon",
+    "Marufinas",
+    "Maruyogon",
+    "Masigla",
+    "Masikap",
+    "Masipag",
+    "Matahimik",
+    "Matiyaga",
+    "Maunland",
+    "Milagrosa",
+    "Model",
+    "Montible",
+    "Napsan",
+    "New Panggangan",
+    "Pagkakaisa",
+    "Princesa",
+    "Salvacion",
+    "San Jose",
+    "San Manuel",
+    "San Miguel",
+    "San Pedro",
+    "San Rafael",
+    "Santa Cruz",
+    "Santa Lourdes",
+    "Santa Lucia",
+    "Santa Monica",
+    "Seaside",
+    "Sicsican",
+    "Simpocan",
+    "Tagabinit",
+    "Tagburos",
+    "Tagumpay",
+    "Tanabag",
+    "Tanglaw",
+    "Tiniguiban",
+  ];
+
+  OverlayEntry _createBarangayOverlay() {
+    RenderBox renderBox =
+        _barangayKey.currentContext!.findRenderObject() as RenderBox;
+    Size size = renderBox.size;
+    Offset offset = renderBox.localToGlobal(Offset.zero);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final overlayHeight = (ppcBarangays.length * 56.0) > screenHeight * 0.5
+        ? screenHeight * 0.5
+        : ppcBarangays.length * 56.0;
+
+    return OverlayEntry(
+      builder: (context) => Positioned(
+        left: offset.dx,
+        top: offset.dy + size.height + 4,
+        width: size.width,
+        child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: overlayHeight),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B5998),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: ppcBarangays.map((barangay) {
+                  return ListTile(
+                    title: Text(
+                      barangay,
+                      style: GoogleFonts.daiBannaSil(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 19,
+                      ),
+                    ),
+                    onTap: () {
+                      setState(() {
+                        selectedBarangay = barangay;
+                        _barangayOverlayEntry?.remove();
+                        _isBarangayDropdownOpen = false;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleBarangayDropdown() {
+    if (_isBarangayDropdownOpen) {
+      _barangayOverlayEntry?.remove();
+    } else {
+      _barangayOverlayEntry = _createBarangayOverlay();
+      Overlay.of(context)?.insert(_barangayOverlayEntry!);
+    }
+    setState(() {
+      _isBarangayDropdownOpen = !_isBarangayDropdownOpen;
+    });
   }
 
   @override
@@ -625,25 +772,62 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                   children: [
                     SizedBox(height: 10),
                     Text(
-                      'Address',
+                      'Barangay',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      key: _barangayKey,
+                      onTap: _toggleBarangayDropdown,
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE1EBEE),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: Colors.black, width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              selectedBarangay ?? "Select Barangay",
+                              style: GoogleFonts.palanquin(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              size: 28,
+                              color: Colors.black,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Street / House Address TextField
+                    Text(
+                      'Street / Block / House No.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: _addressController,
-                      maxLines: 4,
-                      textAlign: TextAlign.left,
-                      textAlignVertical: TextAlignVertical.top,
+                      maxLines: 2,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: Color(0xFFE1EBEE),
-                        labelText: 'Enter your business address',
-                        errorText: _address ? 'Address is required' : null,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'e.g. Purok 1, BLK 2, Lot 7',
                         alignLabelWithHint: true,
-                        contentPadding: EdgeInsets.all(18),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(
                             color: Colors.black,
@@ -663,7 +847,6 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                   ],
                 ),
               ),
-
               // Business Permit - photo media upload
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 15.0),

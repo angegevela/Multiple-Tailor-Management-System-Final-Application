@@ -148,7 +148,9 @@ class ReviewReport extends StatelessWidget {
           final user = FirebaseAuth.instance.currentUser;
           if (user == null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('User not logged in.')),
+              const SnackBar(
+                content: Text('The report is not submitted. Try again later.'),
+              ),
             );
             return;
           }
@@ -247,6 +249,11 @@ class ReviewReport extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               'Report submitted successfully!',
+              style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              'Please wait for the administrator to review your report. Thank you for you patience and insight.',
               style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),

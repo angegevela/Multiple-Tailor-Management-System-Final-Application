@@ -25,7 +25,7 @@ class SignupRegister extends StatefulWidget {
 }
 
 class _SignupRegisterState extends State<SignupRegister> {
-  //accept terms and conditions
+  // Accept Terms and Conditions
   late bool _isChecked;
   @override
   void initState() {
@@ -33,7 +33,7 @@ class _SignupRegisterState extends State<SignupRegister> {
     _isChecked = widget.acceptedTerms;
   }
 
-  //text controllers
+  // Text Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmpasswordController = TextEditingController();
@@ -56,7 +56,7 @@ class _SignupRegisterState extends State<SignupRegister> {
     super.dispose();
   }
 
-  //text controllers - signing up with empty textfield error
+  // Text Controllers - Signing Up with Empty Textfield Error
   bool _validateTextFields() {
     if (_firstnameController.text.trim().isEmpty ||
         _surnameController.text.trim().isEmpty ||
@@ -84,8 +84,23 @@ class _SignupRegisterState extends State<SignupRegister> {
   }
 
   Future signUp() async {
-    // Check empty fields on this signup
-    if (!_validateTextFields()) return;
+    // Check Empty Fields On This Signup
+    if (selectedBarangay == null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Missing Information"),
+          content: Text("Please select your Barangay."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("Okay"),
+            ),
+          ],
+        ),
+      );
+      return false;
+    }
 
     // Terms and Conditions
     if (!_rememberMe) {
@@ -108,7 +123,7 @@ class _SignupRegisterState extends State<SignupRegister> {
       return;
     }
 
-    // Authenticate user
+    // Authenticate User
     if (passwordConfirmed()) {
       try {
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -118,7 +133,7 @@ class _SignupRegisterState extends State<SignupRegister> {
 
         if (!mounted) return;
 
-        // Add user details
+        // Add User Details
         await addUserDetails(
           _firstnameController.text.trim(),
           _surnameController.text.trim(),
@@ -184,7 +199,8 @@ class _SignupRegisterState extends State<SignupRegister> {
 
     if (user != null) {
       String baseCity = "Puerto Princesa City, 5300, Philippines";
-      String fullAddress = "$address, $baseCity";
+      String fullAddress =
+          "$address, $selectedBarangay, Puerto Princesa City, 5300, Philippines";
 
       GeoPoint? geoPoint;
 
@@ -225,6 +241,8 @@ class _SignupRegisterState extends State<SignupRegister> {
         'phoneNumber': phoneNumber,
         'role': role,
         'address': address,
+        'userBarangay': selectedBarangay,
+
         'fullAddress': fullAddress,
         'username': username,
         'passwordHash': hashedPassword,
@@ -270,14 +288,86 @@ class _SignupRegisterState extends State<SignupRegister> {
     }
   }
 
-  // Confirmed password
+  // Confirmed Password
   bool passwordConfirmed() {
     return _passwordController.text.trim() ==
         _confirmpasswordController.text.trim();
   }
 
-  // Remember me checkbox - i agree with terms and conditions
+  // Remember Me Checkbox - I Agree With Terms and Conditions
   bool _rememberMe = false;
+
+  // List Of Barangays here in Puerto Pricesa City
+  final List<String> ppcBarangays = [
+    "Babuyan",
+    "Bagong Bayan",
+    "Bagong Pag-Asa",
+    "Bagong Silang",
+    "Bahile",
+    "Bahile",
+    "Bancao-Bancao",
+    "Barangay ng mga Mangingisda",
+    "Binduyan",
+    "Buenavista",
+    "Cabayugan",
+    "Concepcion",
+    "Inagawan",
+    "Inagawan Sub-Colony",
+    "Irawan",
+    "Iwahig",
+    "Kalipay",
+    "Kamuning",
+    "Langogan",
+    "Liwanag",
+    "Lucbuan",
+    "Luzviminda",
+    "Mabuhay",
+    "Macarascas",
+    "Magkakaibigan",
+    "Maligaya",
+    "Manalo",
+    "Mandaragat",
+    "Manggahan",
+    "Maningning",
+    "Maoyon",
+    "Marufinas",
+    "Maruyogon",
+    "Masigla",
+    "Masikap",
+    "Masipag",
+    "Matahimik",
+    "Matiyaga",
+    "Maunland",
+    "Milagrosa",
+    "Model",
+    "Montible",
+    "Napsan",
+    "New Panggangan",
+    "Pagkakaisa",
+    "Princesa",
+    "Salvacion",
+    "San Jose",
+    "San Manuel",
+    "San Miguel",
+    "San Pedro",
+    "San Rafael",
+    "Santa Cruz",
+    "Santa Lourdes",
+    "Santa Lucia",
+    "Santa Monica",
+    "Seaside",
+    "Sicsican",
+    "Simpocan",
+    "Tagabinit",
+    "Tagburos",
+    "Tagumpay",
+    "Tanabag",
+    "Tanglaw",
+    "Tiniguiban",
+  ];
+
+  // Selected Barangay
+  String? selectedBarangay;
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -309,7 +399,7 @@ class _SignupRegisterState extends State<SignupRegister> {
             reverse: true,
             child: Column(
               children: [
-                //First Name Textfield
+                // First Name Textfield
                 SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15.0),
@@ -539,7 +629,7 @@ class _SignupRegisterState extends State<SignupRegister> {
                   ),
                 ),
 
-                //Address Textfield
+                //Address Section
                 SizedBox(height: 5),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15.0),
@@ -547,46 +637,87 @@ class _SignupRegisterState extends State<SignupRegister> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Address',
+                        'Barangay',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _addressController,
-                          maxLines: 2,
-                          textAlign: TextAlign.left,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'Enter your address',
-                            alignLabelWithHint: true,
-                            contentPadding: EdgeInsets.all(18),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
+
+                      // BARANGAY DROPDOWN
+                      DropdownButtonFormField<String>(
+                        value: selectedBarangay,
+                        items: ppcBarangays.map((barangay) {
+                          return DropdownMenuItem(
+                            value: barangay,
+                            child: Text(barangay),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedBarangay = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFE1EBEE),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Colors.black,
+                              width: 2.5,
                             ),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          labelText: "Select Barangay",
+                        ),
+                      ),
+
+                      SizedBox(height: 12),
+
+                      // STREET / HOUSE ADDRESS
+                      Text(
+                        'Street / Block / House No.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _addressController,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFE1EBEE),
+                          labelText: 'Example: Purok 1, BLK 2, Lot 7',
+                          alignLabelWithHint: true,
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Colors.black,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Colors.black,
+                              width: 2.5,
+                            ),
+                            borderRadius: BorderRadius.circular(5),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-
                 //Create Password Textfield
                 SizedBox(height: 5),
                 Padding(

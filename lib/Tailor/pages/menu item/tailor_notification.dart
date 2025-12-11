@@ -9,8 +9,8 @@ import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_notificationpro
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_fontprovider.dart';
 import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
 
-// Future<void> createNotificationForCustomer({
-//   required String toCustomerId,
+// Future<void> createNotificationForTailor({
+//   required String toTailorId,
 //   required String title,
 //   required String body,
 //   String appointmentId = '',
@@ -19,28 +19,58 @@ import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
 //     'title': title,
 //     'body': body,
 //     'appointmentId': appointmentId,
-//     'toCustomerId': toCustomerId,
-//     'recipientType': 'customer',
-//     'recipientId': toCustomerId,
+//     'recipientType': 'tailor',
+//     'recipientId': toTailorId,
 //     'timestamp': FieldValue.serverTimestamp(),
 //     'readBy': <String>[],
 //   });
 // }
+
 Future<void> createNotificationForTailor({
   required String toTailorId,
   required String title,
   required String body,
   String appointmentId = '',
 }) async {
-  await FirebaseFirestore.instance.collection('notifications').add({
-    'title': title,
-    'body': body,
-    'appointmentId': appointmentId,
-    'recipientType': 'tailor',
-    'recipientId': toTailorId,
-    'timestamp': FieldValue.serverTimestamp(),
-    'readBy': <String>[], 
-  });
+  final userDoc = await FirebaseFirestore.instance
+      .collection('Users')
+      .doc(toTailorId)
+      .get();
+
+  final settings = userDoc.data()?['notificationSettings'] ?? {};
+  final token = userDoc.data()?['fcmToken'];
+
+  bool pushEnabled = settings['pushNotifications'] ?? true;
+  bool appointmentEnabled = settings['appointmentReminders'] ?? true;
+  bool customerMsgEnabled = settings['customerMessages'] ?? true;
+  bool reviewEnabled = settings['reviewFeedbackAlerts'] ?? true;
+
+  if (!pushEnabled) return;
+
+  if (title.contains("Appointment") && !appointmentEnabled) return;
+  if (title.contains("Message") && !customerMsgEnabled) return;
+  if (title.contains("Review") && !reviewEnabled) return;
+
+  final notifRef = await FirebaseFirestore.instance
+      .collection('notificaions')
+      .add({
+        'title': title,
+        'body': body,
+        'appointmentId': appointmentId,
+        'recipientType': 'tailor',
+        'recipientId': toTailorId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'readBy': <String>[],
+      });
+
+  if (token != null) {
+    FirebaseFirestore.instance.collection("sendPushQueue").add({
+      "token": token,
+      "title": title,
+      "body": body,
+      "notificationId": notifRef.id,
+    });
+  }
 }
 
 class AppNotification {

@@ -46,7 +46,7 @@ class _DueDateProductPageState extends State<DueDateProductPage> {
     final now = DateTime.now();
     final diff = appointmentDateTime.difference(now).inDays;
 
-    if (diff <= 7) return 'High';
+    if (diff <= 3) return 'High';
     if (diff <= 7) return 'Medium';
     return 'Low';
   }

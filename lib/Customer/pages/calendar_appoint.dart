@@ -47,7 +47,8 @@ class _CalendarHomeState extends State<CalendarHome> {
     final now = DateTime.now();
     final diff = appointmentDateTime.difference(now).inDays;
 
-    if (diff <= 7) return 'High';
+    // Setting the priority within the appointment date
+    if (diff <= 3) return 'High';
     if (diff <= 7) return 'Medium';
     return 'Low';
   }

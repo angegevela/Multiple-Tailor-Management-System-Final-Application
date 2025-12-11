@@ -97,7 +97,6 @@ class TailorMatcher {
 
       List<Map<String, dynamic>> reviews = [];
 
-  
       matches.add({
         ...data,
         'id': doc.id,

@@ -48,7 +48,7 @@ Future<void> main() async {
   await messaging.requestPermission();
 
   final token = await messaging.getToken();
-  // debugPrint('🔑 FCM Token: $token');
+  // debugPrint('FCM Token: $token');
 
   runApp(
     MultiProvider(
@@ -78,7 +78,7 @@ class _MyAppState extends State<MyApp> {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('🔔 Notification tapped: ${message.notification?.title}');
+      debugPrint('Notification tapped: ${message.notification?.title}');
       navigatorKey.currentState?.push(
         MaterialPageRoute(builder: (_) => const SplashScreen()),
       );

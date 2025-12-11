@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:threadhub_system/Customer/pages/font_provider.dart';
+import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_notification.dart';
 
 class RatingandReviewPage extends StatefulWidget {
   final String tailorId;
@@ -239,6 +240,13 @@ class _RatingandReviewPageState extends State<RatingandReviewPage>
                                   'appointmentId': widget.appointmentId,
                                   'timestamp': FieldValue.serverTimestamp(),
                                 });
+
+                            await createNotificationForTailor(
+                              toTailorId: widget.tailorId,
+                              title: "Review Received",
+                              body: "$displayName left a new review for you",
+                              appointmentId: widget.appointmentId,
+                            );
 
                             Navigator.pop(context);
                           },

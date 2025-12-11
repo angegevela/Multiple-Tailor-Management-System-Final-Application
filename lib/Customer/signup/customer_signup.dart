@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,15 +24,15 @@ class SignupRegister extends StatefulWidget {
 }
 
 class _SignupRegisterState extends State<SignupRegister> {
-  // Accept Terms and Conditions
   late bool _isChecked;
+
   @override
   void initState() {
     super.initState();
     _isChecked = widget.acceptedTerms;
   }
 
-  // Text Controllers
+  // Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmpasswordController = TextEditingController();
@@ -56,254 +55,20 @@ class _SignupRegisterState extends State<SignupRegister> {
     super.dispose();
   }
 
-  // Text Controllers - Signing Up with Empty Textfield Error
-  bool _validateTextFields() {
-    if (_firstnameController.text.trim().isEmpty ||
-        _surnameController.text.trim().isEmpty ||
-        _emailController.text.trim().isEmpty ||
-        _phonenumberController.text.trim().isEmpty ||
-        _addressController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty ||
-        _confirmpasswordController.text.trim().isEmpty) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text("Missing Information. Required Field"),
-          content: Text(" Please fill in all required fields."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("Okay"),
-            ),
-          ],
-        ),
-      );
-      return false;
-    }
-    return true;
-  }
+  // Barangay Overlay
+  final LayerLink _barangayLayerLink = LayerLink();
+  final GlobalKey _barangayKey = GlobalKey();
+  OverlayEntry? _barangayOverlayEntry;
+  bool _isBarangayDropdownOpen = false;
 
-  Future signUp() async {
-    // Check Empty Fields On This Signup
-    if (selectedBarangay == null) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text("Missing Information"),
-          content: Text("Please select your Barangay."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text("Okay"),
-            ),
-          ],
-        ),
-      );
-      return false;
-    }
+  String? selectedBarangay;
 
-    // Terms and Conditions
-    if (!_rememberMe) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Terms & Conditions'),
-          content: const Text(
-            'You must agree to the terms and conditions to continue.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // Authenticate User
-    if (passwordConfirmed()) {
-      try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        if (!mounted) return;
-
-        // Add User Details
-        await addUserDetails(
-          _firstnameController.text.trim(),
-          _surnameController.text.trim(),
-          _emailController.text.trim(),
-          int.parse(_phonenumberController.text.trim()),
-          widget.role,
-          _addressController.text.trim(),
-          _usernameController.text.trim(),
-          _passwordController.text.trim(),
-        );
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const CustomerHomePage()),
-        );
-      } on FirebaseAuthException catch (e) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Registration Error"),
-            content: Text(e.message ?? "Something went wrong."),
-            actions: [
-              TextButton(
-                child: const Text("Okay"),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        );
-      }
-    } else {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: const Text('Passwords do not match.'),
-          actions: [
-            TextButton(
-              child: const Text("Okay"),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  Future addUserDetails(
-    String firstName,
-    String surname,
-    String email,
-    int phoneNumber,
-    String role,
-    String address,
-    String username,
-    String password,
-  ) async {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      String baseCity = "Puerto Princesa City, 5300, Philippines";
-      String fullAddress =
-          "$address, $selectedBarangay, Puerto Princesa City, 5300, Philippines";
-
-      GeoPoint? geoPoint;
-
-      try {
-        List<Location> locations = await locationFromAddress(fullAddress);
-        if (locations.isNotEmpty) {
-          geoPoint = GeoPoint(
-            locations.first.latitude,
-            locations.first.longitude,
-          );
-        }
-      } catch (e) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Invalid Address"),
-            content: const Text(
-              "We couldn't find this location. Please include street and barangay in your address.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Okay'),
-              ),
-            ],
-          ),
-        );
-      }
-
-      // Hash password before storing
-      final hashedPassword = sha256.convert(utf8.encode(password)).toString();
-
-      final Map<String, dynamic> userData = {
-        'firstName': firstName,
-        'surname': surname,
-        'email': email,
-        'phoneNumber': phoneNumber,
-        'role': role,
-        'address': address,
-        'userBarangay': selectedBarangay,
-
-        'fullAddress': fullAddress,
-        'username': username,
-        'passwordHash': hashedPassword,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      if (geoPoint != null) {
-        userData['location'] = geoPoint;
-      }
-
-      try {
-        await FirebaseFirestore.instance
-            .collection('Users')
-            .doc(user.uid)
-            .set(userData);
-
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Firestore Error"),
-            content: const Text(
-              "There was an error saving your account. Please try again.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text("Okay"),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-  }
-
-  // Confirmed Password
-  bool passwordConfirmed() {
-    return _passwordController.text.trim() ==
-        _confirmpasswordController.text.trim();
-  }
-
-  // Remember Me Checkbox - I Agree With Terms and Conditions
-  bool _rememberMe = false;
-
-  // List Of Barangays here in Puerto Pricesa City
+  // List of Puerto Princesa City Barangays
   final List<String> ppcBarangays = [
     "Babuyan",
     "Bagong Bayan",
     "Bagong Pag-Asa",
     "Bagong Silang",
-    "Bahile",
     "Bahile",
     "Bancao-Bancao",
     "Barangay ng mga Mangingisda",
@@ -366,8 +131,208 @@ class _SignupRegisterState extends State<SignupRegister> {
     "Tiniguiban",
   ];
 
-  // Selected Barangay
-  String? selectedBarangay;
+  void _toggleBarangayDropdown() {
+    if (_isBarangayDropdownOpen) {
+      _barangayOverlayEntry?.remove();
+    } else {
+      _barangayOverlayEntry = _createBarangayOverlay();
+      Overlay.of(context)?.insert(_barangayOverlayEntry!);
+    }
+    setState(() {
+      _isBarangayDropdownOpen = !_isBarangayDropdownOpen;
+    });
+  }
+
+  OverlayEntry _createBarangayOverlay() {
+    RenderBox renderBox =
+        _barangayKey.currentContext!.findRenderObject() as RenderBox;
+    Size size = renderBox.size;
+    Offset offset = renderBox.localToGlobal(Offset.zero);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final overlayHeight = (ppcBarangays.length * 56.0) > screenHeight * 0.5
+        ? screenHeight * 0.5
+        : ppcBarangays.length * 56.0;
+
+    return OverlayEntry(
+      builder: (context) => Positioned(
+        left: offset.dx,
+        top: offset.dy + size.height + 4,
+        width: size.width,
+        child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: overlayHeight),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B5998),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: ppcBarangays.map((barangay) {
+                  return ListTile(
+                    title: Text(
+                      barangay,
+                      style: GoogleFonts.daiBannaSil(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 19,
+                      ),
+                    ),
+                    onTap: () {
+                      setState(() {
+                        selectedBarangay = barangay;
+                        _barangayOverlayEntry?.remove();
+                        _isBarangayDropdownOpen = false;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Terms and Conditions Checkbox
+  bool _rememberMe = false;
+
+  // Password confirmation
+  bool passwordConfirmed() =>
+      _passwordController.text.trim() == _confirmpasswordController.text.trim();
+
+  // Sign Up method (simplified for brevity)
+  Future signUp() async {
+    if (selectedBarangay == null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Missing Information"),
+          content: const Text("Please select your Barangay."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Okay"),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    if (!_rememberMe) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Terms & Conditions'),
+          content: const Text(
+            'You must agree to the terms and conditions to continue.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    if (passwordConfirmed()) {
+      try {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          String fullAddress =
+              "${_addressController.text.trim()}, $selectedBarangay, Puerto Princesa City, 5300, Philippines";
+
+          GeoPoint? geoPoint;
+          try {
+            List<Location> locations = await locationFromAddress(fullAddress);
+            if (locations.isNotEmpty) {
+              geoPoint = GeoPoint(
+                locations.first.latitude,
+                locations.first.longitude,
+              );
+            }
+          } catch (_) {}
+
+          final hashedPassword = sha256
+              .convert(utf8.encode(_passwordController.text))
+              .toString();
+
+          await FirebaseFirestore.instance
+              .collection('Users')
+              .doc(user.uid)
+              .set({
+                'firstName': _firstnameController.text.trim(),
+                'surname': _surnameController.text.trim(),
+                'email': _emailController.text.trim(),
+                'phoneNumber':
+                    int.tryParse(_phonenumberController.text.trim()) ?? 0,
+                'role': widget.role,
+                'address': _addressController.text.trim(),
+                'userBarangay': selectedBarangay,
+                'fullAddress': fullAddress,
+                'username': _usernameController.text.trim(),
+                'passwordHash': hashedPassword,
+                if (geoPoint != null) 'location': geoPoint,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const CustomerHomePage()),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Registration Error"),
+            content: Text(e.message ?? "Something went wrong."),
+            actions: [
+              TextButton(
+                child: const Text("Okay"),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text('Passwords do not match.'),
+          actions: [
+            TextButton(
+              child: const Text("Okay"),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -376,445 +341,258 @@ class _SignupRegisterState extends State<SignupRegister> {
       home: Scaffold(
         appBar: AppBar(
           toolbarHeight: 50,
-          title: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
-              Text(
-                'Create Account Now!',
-                style: GoogleFonts.jockeyOne(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),
-              ),
-            ],
+          title: Text(
+            'Create Account Now!',
+            style: GoogleFonts.jockeyOne(
+              fontSize: 30,
+              fontWeight: FontWeight.w400,
+              color: Colors.black,
+            ),
           ),
-
           backgroundColor: const Color(0xFF6082B6),
         ),
-        backgroundColor: Color(0xFFEEEEEE),
+        backgroundColor: const Color(0xFFEEEEEE),
         body: SafeArea(
           child: SingleChildScrollView(
             reverse: true,
-            child: Column(
-              children: [
-                // First Name Textfield
-                SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'First Name',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _firstnameController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'Enter your first name',
-                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+            child: Padding(
+              padding: const EdgeInsets.all(15.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // First Name
+                  Text(
+                    'First Name',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
-
-                // Surname Textfield
-                SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Surname',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  const SizedBox(height: 5),
+                  TextField(
+                    controller: _firstnameController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: const Color(0xFFE1EBEE),
+                      labelText: 'Enter your first name',
+                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 1.5,
                         ),
+                        borderRadius: BorderRadius.circular(5),
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _surnameController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'Enter your surname',
-                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2.5,
                         ),
+                        borderRadius: BorderRadius.circular(5),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
 
-                //Username Textfield
-                SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Username',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _usernameController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'Enter your desired username',
-                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Surname
+                  Text(
+                    'Surname',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
-
-                //Email Textfield
-                SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Email',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: 5),
+                  TextField(
+                    controller: _surnameController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: const Color(0xFFE1EBEE),
+                      labelText: 'Enter your surname',
+                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 1.5,
                         ),
+                        borderRadius: BorderRadius.circular(5),
                       ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'example@email.com',
-                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2.5,
                         ),
+                        borderRadius: BorderRadius.circular(5),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
 
-                //Phone Number Textfield
-                SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Phone Number',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _phonenumberController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'e.g. 09012345678',
-                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Username
+                  Text(
+                    'Username',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
-
-                //Address Section
-                SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Barangay',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  const SizedBox(height: 5),
+                  TextField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: const Color(0xFFE1EBEE),
+                      labelText: 'Enter your desired username',
+                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2,
                         ),
+                        borderRadius: BorderRadius.circular(5),
                       ),
-                      const SizedBox(height: 8),
-
-                      // BARANGAY DROPDOWN
-                      DropdownButtonFormField<String>(
-                        value: selectedBarangay,
-                        items: ppcBarangays.map((barangay) {
-                          return DropdownMenuItem(
-                            value: barangay,
-                            child: Text(barangay),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedBarangay = value;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: const Color(0xFFE1EBEE),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 2.5,
-                            ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          labelText: "Select Barangay",
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2.5,
                         ),
+                        borderRadius: BorderRadius.circular(5),
                       ),
-
-                      SizedBox(height: 12),
-
-                      // STREET / HOUSE ADDRESS
-                      Text(
-                        'Street / Block / House No.',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _addressController,
-                        maxLines: 2,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: const Color(0xFFE1EBEE),
-                          labelText: 'Example: Purok 1, BLK 2, Lot 7',
-                          alignLabelWithHint: true,
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 2.5,
-                            ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                //Create Password Textfield
-                SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Password',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _passwordController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'Create a password',
-                            contentPadding: EdgeInsets.fromLTRB(18, 22, 44, 2),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                  const SizedBox(height: 12),
 
-                //Confirm Password Textfield
-                SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Confirm Password',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(),
-                        child: TextField(
-                          controller: _confirmpasswordController,
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            filled: true,
-                            fillColor: const Color(0xFFE1EBEE),
-                            labelText: 'Re-enter password',
-                            contentPadding: EdgeInsets.fromLTRB(18, 22, 44, 2),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.black,
-                                width: 2.5,
-                              ),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Barangay Dropdown
+                  Text(
+                    'Barangay',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    key: _barangayKey,
+                    onTap: _toggleBarangayDropdown,
+                    child: Container(
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE1EBEE),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(color: Colors.black, width: 1.5),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            selectedBarangay ?? "Select Barangay",
+                            style: GoogleFonts.palanquin(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            size: 28,
+                            color: Colors.black,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
-                // Checkbox with Terms and Conditions navigation
-                SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
+                  // Street/House No.
+                  Text(
+                    'Street / Block / House No.',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _addressController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFFE1EBEE),
+                      labelText: 'Purok 1, BLK 2, Lot 7',
+                      alignLabelWithHint: true,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2.5,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Password
+                  Text(
+                    'Password',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: const Color(0xFFE1EBEE),
+                      labelText: 'Create a password',
+                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 44, 2),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2.5,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Confirm Password
+                  Text(
+                    'Confirm Password',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _confirmpasswordController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: const Color(0xFFE1EBEE),
+                      labelText: 'Re-enter password',
+                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 44, 2),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2.5,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
+
+                  // Terms & Conditions
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
                       Checkbox(
                         value: _rememberMe,
@@ -834,12 +612,8 @@ class _SignupRegisterState extends State<SignupRegister> {
                                     const CustTermsAndConditionsPage(),
                               ),
                             );
-
-                            // If user accepted terms, check the box automatically
                             if (accepted == true) {
-                              setState(() {
-                                _rememberMe = true;
-                              });
+                              setState(() => _rememberMe = true);
                             }
                           },
                           child: Text(
@@ -854,16 +628,11 @@ class _SignupRegisterState extends State<SignupRegister> {
                       ),
                     ],
                   ),
-                ),
 
-                //Sign in Button Textfield
-                SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                  child: GestureDetector(
-                    onTap: () async {
-                      await signUp();
-                    },
+                  // Sign Up Button
+                  const SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: signUp,
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -882,14 +651,10 @@ class _SignupRegisterState extends State<SignupRegister> {
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 10),
-
-                //Redirect to Login Screen
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(15.0, 0, 15.0, 20.0),
-                  child: GestureDetector(
+                  // Redirect to Login
+                  const SizedBox(height: 10),
+                  GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
@@ -917,8 +682,9 @@ class _SignupRegisterState extends State<SignupRegister> {
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),

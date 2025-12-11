@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_fontprovider.dart';
 import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
 
 import 'tailor_reportpage.dart';
@@ -83,6 +85,7 @@ class TailorReviewReport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tailorFontSize = context.watch<TailorFontprovider>().fontSize;
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
@@ -204,6 +207,14 @@ class TailorReviewReport extends StatelessWidget {
                                   'Report submitted successfully!',
                                   style: TextStyle(
                                     fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                Text(
+                                  'Please wait for the administrator to review your report. Thank you for you patience and insight.',
+                                  style: TextStyle(
+                                    fontSize: tailorFontSize,
                                     fontWeight: FontWeight.w600,
                                   ),
                                   textAlign: TextAlign.center,

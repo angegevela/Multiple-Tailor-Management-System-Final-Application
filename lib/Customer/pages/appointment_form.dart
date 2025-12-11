@@ -14,6 +14,7 @@ import 'package:threadhub_system/Customer/pages/font_provider.dart';
 import 'package:threadhub_system/Customer/pages/product%20status/receipt/appointmentdata.dart';
 import 'package:threadhub_system/Customer/pages/product%20status/receipt/customer_receipt.dart';
 import 'package:path/path.dart' as p;
+import 'package:mirai_dropdown_menu/mirai_dropdown_menu.dart';
 
 class AppointmentFormPage extends StatefulWidget {
   final Map<String, Map<String, String>> measurements;
@@ -36,20 +37,20 @@ class AppointmentFormPage extends StatefulWidget {
 enum MeasurementType { assisted, manual }
 
 class _AppointmentFormPageState extends State<AppointmentFormPage> {
-  //Display Selected Appointment Date in Form
+  // Display Selected Appointment Date in Form
   DateTime? appointmentDateTime;
   String? priority;
 
-  //Display Selected Due Date in Form
+  // Display Selected Due Date in Form
   DateTime? dueDateTime;
   String? duepriority;
 
-  //Not Empty Measurement Method
+  // Not Empty Measurement Method
   final bool _hasBeenPressed = false;
   MeasurementType? _selectedType;
   String? _errorText;
 
-  //Customization
+  // Customization
   String? _customizationDescription;
   List<String> _uploadedImages = [];
 
@@ -66,9 +67,10 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     "Custom Design and Alterations",
     "Fitting Assistance",
   ];
+  String _selectedService = '';
+  final GlobalKey _serviceDropdownKey = GlobalKey();
 
-  //Manual Measurement - Passing Data
-  String? _selectedService;
+  // Manual Measurement - Passing Data
   String? _measurementType;
   String? _measurementTypeFromManual;
 
@@ -83,7 +85,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     }
   }
 
-  //Load Old Measurements
+  // Load Old Measurements
   Future<void> _loadUsedMeasurement() async {
     if (widget.usedMeasurementId == null) return;
 
@@ -112,7 +114,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     }
   }
 
-  //Textfield Controllers
+  // Textfield Controllers
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _phonenumberController = TextEditingController();
   final TextEditingController _garmentSpecController = TextEditingController();
@@ -132,7 +134,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     super.dispose();
   }
 
-  //Firebase + Supabase Integration
+  // Firebase + Supabase Integration
   Future<AppointmentData?> _saveAppointment() async {
     try {
       final supabase = Supabase.instance.client;
@@ -286,7 +288,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                 ),
                 SizedBox(height: 10),
 
-                //Phone Number TextField
+                // Phone Number TextField
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Column(
@@ -369,7 +371,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                   ),
                 ),
                 SizedBox(height: 10),
-                //Quantity Of the Product
+                // Quantity Of the Product
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Column(
@@ -431,42 +433,78 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      MiraiDropDownMenu<String>(
+                        child: Container(
+                          key: _serviceDropdownKey,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: Colors.black, width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _selectedService.isEmpty
+                                    ? 'Select a Service'
+                                    : _selectedService,
+                                style: TextStyle(
+                                  fontSize: fontSize,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down),
+                            ],
+                          ),
+                        ),
+                        children: _servicesoffered,
+                        valueNotifier: ValueNotifier<String>(
+                          _selectedService ?? '',
+                        ),
 
-                      DropdownButtonFormField<String>(
-                        value: _selectedService,
-                        items: _servicesoffered.map((service) {
-                          return DropdownMenuItem(
-                            value: service,
-                            child: Text(service),
-                          );
-                        }).toList(),
                         onChanged: (value) {
                           setState(() {
                             _selectedService = value;
-                            _servicesController.text = value ?? '';
+                            _servicesController.text = value;
                           });
                         },
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          labelText: 'Choose a Service',
-                          labelStyle: TextStyle(
-                            color: Colors.black,
-                            fontSize: fontSize,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
+                        radius: 15,
+                        maxHeight: 300,
+                        showSearchTextField: true,
+                        selectedItemBackgroundColor: Color(0xFF628141),
+                        itemWidgetBuilder:
+                            (index, item, {isItemSelected = false}) {
+                              final String displayText = item ?? '';
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                color: isItemSelected
+                                    ? Color(0xFF628141)
+                                    : Colors.transparent,
+                                child: Text(
+                                  displayText,
+                                  style: TextStyle(
+                                    fontSize: fontSize,
+                                    color: isItemSelected
+                                        ? Colors.white
+                                        : Colors.black,
+                                    fontWeight: isItemSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              );
+                            },
                       ),
                     ],
                   ),
                 ),
-
                 SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -593,7 +631,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
 
                 SizedBox(height: 10),
 
-                //Message Textfield
+                // Message Textfield
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Column(

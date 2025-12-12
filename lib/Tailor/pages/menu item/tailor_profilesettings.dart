@@ -6,10 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:threadhub_system/Pages/login_page.dart';
+import 'package:threadhub_system/Pages/theme_provider.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_availabilitysettings.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_fontprovider.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_help.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_profilesettings/tailor_personalinfo.dart';
+import 'package:threadhub_system/Pages/theme_provider.dart';
 
 class TailorProfileSettingsPage extends StatefulWidget {
   const TailorProfileSettingsPage({super.key});
@@ -104,6 +106,7 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
     final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
     return Scaffold(
       appBar: AppBar(
@@ -275,11 +278,9 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
                     fontSize: tailorfontSize,
                   ),
                 ),
-                value: darkModeEnabled,
+                value: themeProvider.isDark,
                 onChanged: (bool value) {
-                  setState(() {
-                    darkModeEnabled = value;
-                  });
+                  context.read<ThemeProvider>().toggleTheme(value);
                 },
               ),
             ),

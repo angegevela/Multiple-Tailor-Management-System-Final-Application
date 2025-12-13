@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:threadhub_system/Customer/signup/customer_homepage.dart';
 import 'package:threadhub_system/Customer/signup/terms&condition_customer.dart';
+import 'package:threadhub_system/Pages/approval_screen(signup).dart';
 import 'package:threadhub_system/Pages/login_page.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -31,6 +32,10 @@ class _SignupRegisterState extends State<SignupRegister> {
     super.initState();
     _isChecked = widget.acceptedTerms;
   }
+
+  // Password Hiding for Security Purposes
+  bool _obsecurePassword = true;
+  bool _obsecureConfirmPassword = true;
 
   // Controllers
   final _emailController = TextEditingController();
@@ -284,7 +289,7 @@ class _SignupRegisterState extends State<SignupRegister> {
                 'passwordHash': hashedPassword,
                 if (geoPoint != null) 'location': geoPoint,
                 'approved': false,
-                'accountStatus':'pending',
+                'accountStatus': 'pending',
                 'createdAt': FieldValue.serverTimestamp(),
               });
 
@@ -295,7 +300,12 @@ class _SignupRegisterState extends State<SignupRegister> {
               backgroundColor: Colors.green,
             ),
           );
-
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ApprovalPendingScreen(),
+            ),
+          );
         }
       } on FirebaseAuthException catch (e) {
         if (!mounted) return;
@@ -533,12 +543,26 @@ class _SignupRegisterState extends State<SignupRegister> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _passwordController,
+                    obscureText: _obsecurePassword,
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       filled: true,
                       fillColor: const Color(0xFFE1EBEE),
                       labelText: 'Create a password',
                       contentPadding: const EdgeInsets.fromLTRB(18, 22, 44, 2),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obsecurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.black,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obsecurePassword = !_obsecurePassword;
+                          });
+                        },
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderSide: const BorderSide(
                           color: Colors.black,
@@ -565,12 +589,26 @@ class _SignupRegisterState extends State<SignupRegister> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _confirmpasswordController,
+                    obscureText: _obsecureConfirmPassword,
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       filled: true,
                       fillColor: const Color(0xFFE1EBEE),
                       labelText: 'Re-enter password',
-                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 44, 2),
+                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 0, 2),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obsecureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.black,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obsecureConfirmPassword = !_obsecureConfirmPassword;
+                          });
+                        },
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderSide: const BorderSide(
                           color: Colors.black,

@@ -10,11 +10,12 @@ import 'package:threadhub_system/Customer/pages/font_provider.dart';
 import 'package:threadhub_system/Pages/splash_screen.dart';
 import 'package:threadhub_system/Tailor/pages/menu item/tailor_profilesettings/tailor_fontprovider.dart';
 import 'package:threadhub_system/firebase_options.dart';
+import 'package:threadhub_system/Pages/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
-  // Keep native splash until initialization 
+  // Keep native splash until initialization
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   // Initialize Firebase
@@ -55,6 +56,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => FontProvider()),
         ChangeNotifierProvider(create: (_) => TailorFontprovider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const MyApp(),
     ),
@@ -89,9 +91,24 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
+      themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
+      theme: ThemeData(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.white,
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        colorScheme: const ColorScheme.dark(),
+        useMaterial3: true,
+      ),
+
       home: const SplashScreen(),
     );
   }

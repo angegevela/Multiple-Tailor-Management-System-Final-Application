@@ -5,6 +5,7 @@ import 'package:threadhub_system/Admin/pages/sidebar/people.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/report_management.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:threadhub_system/Admin/login/admin_login.dart';
+import 'package:threadhub_system/Admin/pages/sidebar/user_approval.dart';
 
 class Menu extends StatefulWidget {
   const Menu({super.key});
@@ -98,6 +99,21 @@ class _MenuState extends State<Menu> {
           ),
 
           menuItem(
+            icon: Icons.approval,
+            label: 'User Approvals',
+            index: 2,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AdminUserApprovalFrame(),
+                ),
+              );
+            },
+          ),
+
+          menuItem(
             icon: Icons.report,
             label: 'Report Management',
             index: 2,
@@ -109,7 +125,6 @@ class _MenuState extends State<Menu> {
               );
             },
           ),
-
           const Spacer(),
           menuItem(
             icon: Icons.logout_sharp,

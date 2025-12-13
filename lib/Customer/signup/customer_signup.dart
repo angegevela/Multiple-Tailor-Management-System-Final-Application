@@ -464,6 +464,37 @@ class _SignupRegisterState extends State<SignupRegister> {
                   ),
                   const SizedBox(height: 12),
 
+                  // Email
+                  Text(
+                    'Email',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 5),
+                  TextField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: const Color(0xFFE1EBEE),
+                      labelText: 'Enter your email',
+                      contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2.5,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   // Barangay Dropdown
                   Text(
                     'Barangay',
@@ -605,7 +636,8 @@ class _SignupRegisterState extends State<SignupRegister> {
                         ),
                         onPressed: () {
                           setState(() {
-                            _obsecureConfirmPassword = !_obsecureConfirmPassword;
+                            _obsecureConfirmPassword =
+                                !_obsecureConfirmPassword;
                           });
                         },
                       ),

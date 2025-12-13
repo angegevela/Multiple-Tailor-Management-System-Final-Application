@@ -944,36 +944,41 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                           border: InputBorder.none,
                           filled: true,
                           fillColor: const Color(0xFFE1EBEE),
-                          labelText: 'Create password',
-                          errorText: _password
-                              ? 'Creating a password is required'
-                              : null,
-                          contentPadding: EdgeInsets.fromLTRB(18, 22, 44, 2),
+                          labelText: 'Create a password',
+                          contentPadding: const EdgeInsets.fromLTRB(
+                            18,
+                            22,
+                            0,
+                            2,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obsecureConfirmPassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.black,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obsecureConfirmPassword =
+                                    !_obsecureConfirmPassword;
+                              });
+                            },
+                          ),
+
                           enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                               color: Colors.black,
                               width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(5),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                               color: Colors.black,
                               width: 2.5,
                             ),
                             borderRadius: BorderRadius.circular(5),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obsecurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obsecurePassword = !_obsecurePassword;
-                              });
-                            },
                           ),
                         ),
                       ),

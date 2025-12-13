@@ -984,6 +984,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  mirai_dropdown_menu:
+    dependency: "direct main"
+    description:
+      name: mirai_dropdown_menu
+      sha256: c6a009c2101df58553d81bf43d12b76402d661488dea61ce6e55e243c59299cd
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.9+1"
   multi_select_flutter:
     dependency: "direct main"
     description:
@@ -1304,6 +1312,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
+  simple_animated_button:
+    dependency: "direct main"
+    description:
+      name: simple_animated_button
+      sha256: "128cf48cd3002c323eaf23738386674d5830eef09443291387627b2bff864a9b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.9"
   simple_gesture_detector:
     dependency: transitive
     description:

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:threadhub_system/Pages/approval_screen(signup).dart';
 import 'package:threadhub_system/Pages/login_page.dart';
 import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
 import 'package:threadhub_system/Tailor/signup/terms&conditions.dart';
@@ -57,6 +58,10 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
   // Remember Me
   bool _rememberMe = false;
+
+  // Password Security for Tailors
+  bool _obsecurePassword = true;
+  bool _obsecureConfirmPassword = true;
 
   // Selected Barangay
   String? selectedBarangay;
@@ -261,6 +266,8 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
         'businessPermits': permitUrls,
         'createdAt': FieldValue.serverTimestamp(),
         'passwordHash': hashPassword(_passwordController.text.trim()),
+        'approved': false,
+        'accountStatus': 'pending',
       };
 
       if (geoPoint != null) userData['location'] = geoPoint;
@@ -278,9 +285,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const TailorHomePage(showAccepted: true),
-        ),
+        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
       );
 
       if (!mounted) return;
@@ -934,6 +939,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                       decoration: BoxDecoration(),
                       child: TextField(
                         controller: _passwordController,
+                        obscureText: _obsecurePassword,
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           filled: true,
@@ -957,6 +963,18 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                             ),
                             borderRadius: BorderRadius.circular(5),
                           ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obsecurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obsecurePassword = !_obsecurePassword;
+                              });
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -965,6 +983,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
               ),
 
               SizedBox(height: 15),
+
               //Confirm Password
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 15.0),
@@ -984,6 +1003,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                       decoration: BoxDecoration(),
                       child: TextField(
                         controller: _confirmpasswordController,
+                        obscureText: _obsecureConfirmPassword,
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           filled: true,
@@ -1006,6 +1026,19 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                               width: 2.5,
                             ),
                             borderRadius: BorderRadius.circular(5),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obsecureConfirmPassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obsecureConfirmPassword =
+                                    !_obsecureConfirmPassword;
+                              });
+                            },
                           ),
                         ),
                       ),

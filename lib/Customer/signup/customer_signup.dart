@@ -283,6 +283,8 @@ class _SignupRegisterState extends State<SignupRegister> {
                 'username': _usernameController.text.trim(),
                 'passwordHash': hashedPassword,
                 if (geoPoint != null) 'location': geoPoint,
+                'approved': false,
+                'accountStatus':'pending',
                 'createdAt': FieldValue.serverTimestamp(),
               });
 
@@ -294,10 +296,6 @@ class _SignupRegisterState extends State<SignupRegister> {
             ),
           );
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const CustomerHomePage()),
-          );
         }
       } on FirebaseAuthException catch (e) {
         if (!mounted) return;

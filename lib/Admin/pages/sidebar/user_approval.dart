@@ -208,8 +208,9 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
                                 child: CircularProgressIndicator(),
                               );
                             },
-                            errorBuilder: (_, __, ___) =>
-                                const Text('Permit not available'),
+                            errorBuilder: (_, __, ___) => const Text(
+                              'Permit is not accessible through the database.',
+                            ),
                           ),
                         );
                       },

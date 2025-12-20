@@ -49,9 +49,31 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.pop(context);
           showDialog(
             context: context,
-            builder: (context) => const AlertDialog(
-              title: Text("Login Error"),
-              content: Text("No account found with that username."),
+            builder: (context) => AlertDialog(
+              backgroundColor: Colors.blueGrey[100],
+              title: Text(
+                "Login Error",
+                style: GoogleFonts.songMyung(fontSize: 23),
+                textAlign: TextAlign.center,
+              ),
+              content: Text(
+                "No account found with that username.",
+                style: GoogleFonts.songMyung(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    "Okay",
+                    style: GoogleFonts.songMyung(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
           return;
@@ -82,9 +104,34 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pop(context);
         showDialog(
           context: context,
-          builder: (context) => const AlertDialog(
-            title: Text("Login Error"),
-            content: Text("User record not found in the database."),
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.blueGrey[100],
+            title: Text(
+              'Login Error',
+              style: GoogleFonts.songMyung(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            content: Text(
+              'User record not found in the database.',
+              style: GoogleFonts.songMyung(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                child: Text(
+                  'Confirm',
+                  style: GoogleFonts.songMyung(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
           ),
         );
         return;
@@ -111,8 +158,17 @@ class _LoginPageState extends State<LoginPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text("Role Error"),
-            content: const Text("User role is not recognized."),
+            title: Text(
+              "Role Error",
+              style: GoogleFonts.songMyung(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              "User role is not recognized.",
+              style: GoogleFonts.songMyung(fontSize: 16),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -132,12 +188,15 @@ class _LoginPageState extends State<LoginPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Login Failed'),
-            content: Text(e.message ?? 'An error occurred.'),
+            title: Text('Login Failed'),
+            content: Text(
+              e.message ?? 'An error occurred.',
+              style: GoogleFonts.songMyung(fontSize: 16),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text("Okay"),
+                child: Text("Okay", style: GoogleFonts.songMyung(fontSize: 16)),
               ),
             ],
           ),
@@ -150,7 +209,25 @@ class _LoginPageState extends State<LoginPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return const AlertDialog(title: Text('Incorrect Email'));
+        return AlertDialog(
+          backgroundColor: Colors.blueGrey[100],
+          title: Text(
+            'Incorrect Email',
+            style: GoogleFonts.songMyung(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Confirm',
+                style: GoogleFonts.songMyung(fontSize: 16),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
@@ -159,7 +236,25 @@ class _LoginPageState extends State<LoginPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return const AlertDialog(title: Text('Incorrect Password'));
+        return AlertDialog(
+          backgroundColor: Colors.blueGrey[100],
+          title: Text(
+            'Incorrect Password',
+            style: GoogleFonts.songMyung(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Confirm',
+                style: GoogleFonts.songMyung(fontSize: 16),
+              ),
+            ),
+          ],
+        );
       },
     );
   }

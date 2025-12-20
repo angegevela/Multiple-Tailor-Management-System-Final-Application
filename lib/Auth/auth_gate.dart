@@ -39,13 +39,11 @@ class AuthGate extends StatelessWidget {
               return const ApprovalPendingScreen();
             }
 
-            // Approved users
+            // Approved users - Navigation Based on the role and user
             if (role == 'customer') {
               return const CustomerHomePage();
-              // } else if (role == 'tailor') {
-              //   return const TailorHomePage(showAccepted: null,);
-              // } else if (role == 'admin') {
-              //   return const AdminDashboard();
+            } else if (role == 'tailor') {
+              return const TailorHomePage(showAccepted: true);
             }
 
             return const Scaffold(body: Center(child: Text('Invalid role')));

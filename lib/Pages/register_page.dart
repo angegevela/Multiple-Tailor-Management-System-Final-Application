@@ -38,9 +38,9 @@ class _RegisterPageState extends State<RegisterPage> {
         appBar: AppBar(
           toolbarHeight: 50,
           title: Column(
-            mainAxisAlignment: MainAxisAlignment.center, 
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 20), 
+              const SizedBox(height: 20),
               Text(
                 'Create Account Now!',
                 style: GoogleFonts.jockeyOne(
@@ -73,9 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(
-                        height: 8,
-                      ), 
+                      const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(),
                         child: TextField(
@@ -119,9 +117,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(
-                        height: 8,
-                      ),
+                      const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(),
                         child: TextField(
@@ -164,9 +160,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(
-                        height: 8,
-                      ), 
+                      const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(),
                         child: TextField(
@@ -209,9 +203,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(
-                        height: 8,
-                      ), 
+                      const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(),
                         child: TextField(
@@ -254,9 +246,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(
-                        height: 8,
-                      ), 
+                      const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(),
                         child: TextField(
@@ -299,9 +289,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(
-                        height: 8,
-                      ),
+                      const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(),
                         child: TextField(
@@ -362,7 +350,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ],
                   ),
                 ),
-                
+
                 SizedBox(height: 20),
                 //Sign in Button
                 Padding(

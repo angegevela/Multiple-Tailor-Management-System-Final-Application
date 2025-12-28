@@ -375,146 +375,58 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('User Approval'),
-        backgroundColor: const Color(0xFF6082B6),
-      ),
-      drawer: const Menu(),
-      backgroundColor: const Color(0xFFD9D9D9),
-      body: Column(
-        children: [
-          const SizedBox(height: 12),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF6082B6),
+          title: const Text('User Approvals'),
+          centerTitle: true,
+        ),
+        drawer: const Menu(),
+        backgroundColor: const Color(0xFFD9D9D9),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: BottomNavBAr(
-              selectedItem: _selectedTab,
-              callbackFromNav: (index) {
-                setState(() {
-                  _selectedTab = index;
-                });
-              },
-            ),
-          ),
-
-          const SizedBox(height: 12),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: getUsersStream(roles[_selectedTab]),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No pending users.'));
-                }
-                final users = snapshot.data!.docs;
-                return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: users.length,
-                  itemBuilder: (context, index) {
-                    return userCard(users[index]);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      // bottomNavigationBar: BottomNavBAr(
-      //   selectedItem: _selectedTab,
-      //   callbackFromNav: (index) {
-      //     setState(() {
-      //       _selectedTab = index;
-      //     });
-      //   },
-      // ),
-    );
-  }
-}
-
-// Source - https://stackoverflow.com/a
-// Posted by Md. Yeasin Sheikh
-// Retrieved 2025-12-14, License - CC BY-SA 4.0
-
-class BottomNavBAr extends StatelessWidget {
-  final int selectedItem;
-
-  final Function callbackFromNav;
-
-  const BottomNavBAr({
-    Key? key,
-    required this.callbackFromNav,
-    required this.selectedItem,
-  }) : super(key: key);
-
-  get _radius => Radius.circular(8);
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SizedBox(
-        height: kToolbarHeight,
-        child: Stack(
+        body: Column(
           children: [
-            Align(
-              alignment: Alignment.center,
-              child: Container(
-                width: constraints.maxWidth * .85,
-                height: kToolbarHeight * .7,
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Color(0xFF547792),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            Align(
-              alignment: Alignment.center,
-              child: SizedBox(
-                width: constraints.maxWidth * .88,
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      ChipItem(
-                        text: "Tailors",
-                        width: constraints.maxWidth * .5,
-                        isSelected: 0 == selectedItem,
-                        oncallBack: () => callbackFromNav(0),
-                        decoration: 0 == selectedItem
-                            ? BoxDecoration(
-                                color: Color(0xFFA1BC98),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: _radius,
-                                  topRight: _radius,
-                                  bottomLeft: _radius,
-                                ),
-                              )
-                            : BoxDecoration(),
-                      ),
-                      ChipItem(
-                        text: "Customers",
-                        width: constraints.maxWidth * .5,
-                        isSelected: 1 == selectedItem,
-                        decoration: 1 == selectedItem
-                            ? BoxDecoration(
-                                color: Color(0xFFA1BC98),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: _radius,
-                                  topRight: _radius,
-                                  bottomRight: _radius,
-                                ),
-                              )
-                            : BoxDecoration(),
-                        oncallBack: () => callbackFromNav(1),
-                      ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    labelStyle: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    unselectedLabelStyle: GoogleFonts.poppins(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.black54,
+                    tabs: [
+                      Tab(text: 'Tailors'),
+                      Tab(text: 'Customers'),
+                      Tab(text: 'All'),
                     ],
                   ),
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            // TAB CONTENT
+            Expanded(child: _ApprovalTabViews()),
           ],
         ),
       ),
@@ -522,43 +434,51 @@ class BottomNavBAr extends StatelessWidget {
   }
 }
 
-class ChipItem extends StatelessWidget {
-  final double width;
+class _ApprovalTabViews extends StatelessWidget {
+  const _ApprovalTabViews();
 
-  final String text;
-  final bool isSelected;
-  final Function oncallBack;
+  Stream<QuerySnapshot> _getUsers(String role) {
+    final query = FirebaseFirestore.instance
+        .collection('Users')
+        .where('accountStatus', isEqualTo: 'pending');
 
-  final BoxDecoration decoration;
+    if (role == 'All') return query.snapshots();
+    return query.where('role', isEqualTo: role).snapshots();
+  }
 
-  const ChipItem({
-    Key? key,
-    required this.oncallBack,
-    required this.text,
-    required this.width,
-    required this.isSelected,
-    this.decoration = const BoxDecoration(),
-  }) : super(key: key);
+  Widget _buildList(Stream<QuerySnapshot> stream) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No pending users.'));
+        }
+
+        final users = snapshot.data!.docs;
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            return (context
+                    .findAncestorStateOfType<_AdminUserApprovalFrameState>()!)
+                .userCard(users[index]);
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => oncallBack(),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        padding: EdgeInsets.all(8),
-        width: width,
-        decoration: decoration,
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: isSelected ? 24 : 16,
-            color: Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
+    return TabBarView(
+      children: [
+        _buildList(_getUsers('Tailor')),
+        _buildList(_getUsers('Customer')),
+        _buildList(_getUsers('All')),
+      ],
     );
   }
 }

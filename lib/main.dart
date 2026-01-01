@@ -56,7 +56,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => FontProvider()),
         ChangeNotifierProvider(create: (_) => TailorFontprovider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        // ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const MyApp(),
     ),
@@ -91,23 +91,23 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    // final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
-      themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.white,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        colorScheme: const ColorScheme.dark(),
-        useMaterial3: true,
-      ),
+      // themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
+      // theme: ThemeData(
+      //   brightness: Brightness.light,
+      //   scaffoldBackgroundColor: Colors.white,
+      //   useMaterial3: true,
+      // ),
+      // darkTheme: ThemeData(
+      //   brightness: Brightness.dark,
+      //   scaffoldBackgroundColor: const Color(0xFF121212),
+      //   colorScheme: const ColorScheme.dark(),
+      //   useMaterial3: true,
+      // ),
 
       home: const SplashScreen(),
     );

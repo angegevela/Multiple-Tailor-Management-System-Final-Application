@@ -380,12 +380,9 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: const Color(0xFF6082B6),
-          title: const Text('User Approvals'),
-          centerTitle: true,
         ),
         drawer: const Menu(),
         backgroundColor: const Color(0xFFD9D9D9),
-
         body: Column(
           children: [
             const SizedBox(height: 12),

@@ -106,7 +106,7 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    // final themeProvider = context.watch<ThemeProvider>();
     final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
     return Scaffold(
       appBar: AppBar(
@@ -265,25 +265,25 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
               ),
             ),
 
-            // DARK MODE
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: _boxDecoration(),
-              child: SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                title: Text(
-                  'Dark Mode',
-                  style: GoogleFonts.prompt(
-                    fontWeight: FontWeight.w500,
-                    fontSize: tailorfontSize,
-                  ),
-                ),
-                value: themeProvider.isDark,
-                onChanged: (bool value) {
-                  context.read<ThemeProvider>().toggleTheme(value);
-                },
-              ),
-            ),
+            // DARK MODE - Commenting this out 
+            // Container(
+            //   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            //   decoration: _boxDecoration(),
+            //   child: SwitchListTile(
+            //     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            //     title: Text(
+            //       'Dark Mode',
+            //       style: GoogleFonts.prompt(
+            //         fontWeight: FontWeight.w500,
+            //         fontSize: tailorfontSize,
+            //       ),
+            //     ),
+            //     value: themeProvider.isDark,
+            //     onChanged: (bool value) {
+            //       context.read<ThemeProvider>().toggleTheme(value);
+            //     },
+            //   ),
+            // ),
 
             // HELP
             _buildListTile(

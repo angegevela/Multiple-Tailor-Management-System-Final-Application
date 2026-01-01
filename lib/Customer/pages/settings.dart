@@ -159,23 +159,23 @@ class _CustomerSettingsState extends State<CustomerSettings> {
 
             // Dark Mode toggle
             const SizedBox(height: 2),
-            Container(
-              margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
-              decoration: BoxDecoration(color: Colors.white),
-              child: SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                title: Text(
-                  'Dark Mode',
-                  style: GoogleFonts.montserratAlternates(fontSize: fontSize),
-                ),
-                value: darkmodeToggle,
-                onChanged: (bool value) {
-                  setState(() {
-                    darkmodeToggle = value;
-                  });
-                },
-              ),
-            ),
+            // Container(
+            //   margin: const EdgeInsets.only(left: 10, right: 10, bottom: 10),
+            //   decoration: BoxDecoration(color: Colors.white),
+            //   child: SwitchListTile(
+            //     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+            //     title: Text(
+            //       'Dark Mode',
+            //       style: GoogleFonts.montserratAlternates(fontSize: fontSize),
+            //     ),
+            //     value: darkmodeToggle,
+            //     onChanged: (bool value) {
+            //       setState(() {
+            //         darkmodeToggle = value;
+            //       });
+            //     },
+            //   ),
+            // ),
 
             // Help ListTile
             Container(

@@ -17,3 +17,6 @@ This project utilizes Flutter and Android throughout the Thesis Timeline.
 ## Key Findings
 
 The Multiple Tailor Shops Management System was developed to tackle challenges in the tailoring industry in Puerto Princesa City, such as manual appointment handling, workload imbalance, and communication issues between tailors and customers. The researchers gathered qualitative and quantitative data through user testing and interviews with 9 tailor shops and 11 customers. These responses informed a qualitative analysis that highlighted the key findings from the interviews.
+
+
+## Status

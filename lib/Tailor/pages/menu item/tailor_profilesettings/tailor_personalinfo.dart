@@ -102,10 +102,13 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
       );
 
       setState(() => _profileImageUrl = cacheBustedUrl);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile picture updated successfully!")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Profile picture updated successfully!"),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('Upload error: $e');
     }
@@ -152,12 +155,13 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
     } catch (e) {
       debugPrint("Save error: $e");
       setState(() => _isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Error saving changes. Please try again."),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Error saving changes. Please try again."),
+          ),
+        );
+      }
     }
   }
 
@@ -355,7 +359,7 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
                           borderRadius: BorderRadius.circular(6),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withAlpha(51),
                               blurRadius: 2,
                               offset: const Offset(1, 1),
                             ),

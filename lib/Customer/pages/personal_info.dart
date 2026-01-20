@@ -12,6 +12,7 @@ class PersonalInformationPage extends StatefulWidget {
   const PersonalInformationPage({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _PersonalInformationPageState createState() =>
       _PersonalInformationPageState();
 }

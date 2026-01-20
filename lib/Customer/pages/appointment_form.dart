@@ -195,11 +195,13 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
         tailorAssigned: null,
       );
       if (!RegExp(r'^[0-9]+$').hasMatch(_phonenumberController.text.trim())) {
+       if (mounted){
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Phone number should contain numbers only."),
           ),
         );
+       } 
         return null;
       }
       await docRef.set(appointmentData.toMap());
@@ -463,7 +465,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         ),
                         children: _servicesoffered,
                         valueNotifier: ValueNotifier<String>(
-                          _selectedService ?? '',
+                          _selectedService,
                         ),
 
                         onChanged: (value) {

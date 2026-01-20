@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -37,10 +36,11 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         'timestamp': Timestamp.now(),
         'readBy': [],
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The reportee user has been notified')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The reportee user has been notified')),
+        );
+      }
     } catch (e) {
       debugPrint('Error notifying the user: $e');
     }
@@ -51,9 +51,11 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       await _firestore.collection('Users').doc(userId).update({
         'isDisabled': true,
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('User account disabled')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('User account disabled')));
+      }
     } catch (e) {
       debugPrint('Error disabling user: $e');
     }
@@ -67,11 +69,14 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
         'content': message,
         'createdAt': Timestamp.now(),
       });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Message sent to user')));
-    } catch (e) {}
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Message sent to user')));
+      }
+    } catch (e) {
+      debugPrint('Error Updating The User: $e');
+    }
   }
 
   Widget buildStorageImage(String url) {

@@ -56,7 +56,7 @@ class _TailorPortfolioDetailPageState extends State<TailorPortfolioDetailPage> {
 
         signedList.add(signedUrl);
       } catch (e) {
-        print('Error signing URL for $relativePath: $e');
+        debugPrint('Error signing URL for $relativePath: $e');
         signedList.add(img);
       }
     }

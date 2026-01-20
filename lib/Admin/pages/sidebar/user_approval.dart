@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:simple_animated_button/bouncing_button.dart';
 import 'package:simple_animated_button/elevated_layer_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/menu.dart';
@@ -16,7 +13,7 @@ class AdminUserApprovalFrame extends StatefulWidget {
 }
 
 class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
-  int _selectedTab = 0;
+  final int _selectedTab = 0;
 
   final List<String> roles = ['Tailor', 'Customer', 'All'];
 
@@ -61,7 +58,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
           .from('Tailor')
           .createSignedUrl('Permits/$path', 3600);
     } catch (e) {
-      print('Error generating signed URL for $path: $e');
+      debugPrint('Error generating signed URL for $path: $e');
       return null;
     }
   }
@@ -75,7 +72,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
     final extraDetails = role == 'Tailor'
         ? '${user['businessNumber'] ?? '-'}'
         : '${user['phoneNumber'] ?? '-'}';
-    final user_address = user['fullAddress'] ?? user['address'] ?? '-';
+    final userAddress = user['fullAddress'] ?? user['address'] ?? '-';
 
     // Raw permit URLs from Firestore
     final List<String> permitUrls = role == 'Tailor'
@@ -85,7 +82,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
         : [];
 
     // Fetch signed URLs
-    Future<List<String>> _getSignedPermitUrls() async {
+    Future<List<String>> getSignedPermitUrls() async {
       List<String> signedUrls = [];
       for (var url in permitUrls) {
         final path = _extractRelativePath(url);
@@ -108,7 +105,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
-              colors: [const Color(0xFF547792).withOpacity(0.1), Colors.white],
+              colors: [const Color(0xFF547792).withAlpha(25), Colors.white],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -146,7 +143,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow(Icons.location_on, 'Address', user_address),
+                    _buildInfoRow(Icons.location_on, 'Address', userAddress),
                     const SizedBox(height: 8),
                     _buildInfoRow(Icons.work, 'Role', role),
                     const SizedBox(height: 8),
@@ -183,7 +180,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
                       border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: FutureBuilder<List<String>>(
-                      future: _getSignedPermitUrls(),
+                      future: getSignedPermitUrls(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -216,7 +213,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
                                   decoration: BoxDecoration(
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
+                                        color: Colors.black.withAlpha(25),
                                         blurRadius: 6,
                                         offset: const Offset(0, 3),
                                       ),
@@ -277,7 +274,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.green.withOpacity(0.3),
+                            color: Colors.green.withAlpha(76),
                             blurRadius: 6,
                             offset: const Offset(0, 3),
                           ),
@@ -318,7 +315,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.red.withOpacity(0.3),
+                            color: Colors.red.withAlpha(76),
                             blurRadius: 6,
                             offset: const Offset(0, 3),
                           ),
@@ -378,9 +375,7 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF6082B6),
-        ),
+        appBar: AppBar(backgroundColor: const Color(0xFF6082B6)),
         drawer: const Menu(),
         backgroundColor: const Color(0xFFD9D9D9),
         body: Column(

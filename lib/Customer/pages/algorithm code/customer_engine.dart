@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 
@@ -20,7 +21,7 @@ class TailorMatcher {
 
     if (customerStreet.isEmpty) {
       try {} catch (e) {
-        print('Error getting customer street: $e');
+        debugPrint('Error getting customer street: $e');
         return [];
       }
     }
@@ -84,8 +85,9 @@ class TailorMatcher {
       final List<String> days = ((availability['days'] ?? []) as List<dynamic>)
           .map((d) => d.toString().toLowerCase())
           .toList();
-      if (days.isNotEmpty && !days.contains(requestedDay.toLowerCase()))
+      if (days.isNotEmpty && !days.contains(requestedDay.toLowerCase())) {
         continue;
+      }
 
       final int maxCustomers = availability['maxCustomersPerDay'] ?? 999;
       final existingBookings = await _db

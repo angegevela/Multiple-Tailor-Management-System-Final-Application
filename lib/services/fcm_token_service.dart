@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 
 class FCMTokenService {
   static Future<void> saveTokenToFirestore(String userId) async {
@@ -10,10 +11,10 @@ class FCMTokenService {
           {'fcmToken': token},
           SetOptions(merge: true),
         );
-        print("✅ FCM token saved for $userId: $token");
+        debugPrint("✅ FCM token saved for $userId: $token");
       }
     } catch (e) {
-      print("❌ Error saving FCM token: $e");
+      debugPrint("❌ Error saving FCM token: $e");
     }
   }
 
@@ -22,7 +23,7 @@ class FCMTokenService {
       await FirebaseFirestore.instance.collection('users').doc(userId).update({
         'fcmToken': newToken,
       });
-      print("🔁 Token refreshed for $userId: $newToken");
+      debugPrint("🔁 Token refreshed for $userId: $newToken");
     });
   }
 }

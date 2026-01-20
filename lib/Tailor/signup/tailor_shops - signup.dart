@@ -63,6 +63,12 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
   bool _obsecurePassword = true;
   bool _obsecureConfirmPassword = true;
 
+  // Adding some additional security
+  bool hasMinLength = false;
+  bool hasUppercase = false;
+  bool hasNumber = false;
+  bool passwordMatch = false;
+
   // Selected Barangay
   String? selectedBarangay;
   bool _barangay = false;
@@ -76,6 +82,40 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
     return digest.toString();
+  }
+
+  void _checkPassword(String password) {
+    setState(() {
+      hasMinLength = password.length >= 6;
+      hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      hasNumber = password.contains(RegExp(r'[0-9]'));
+    });
+  }
+
+  void _checkConfirmPassword(String confirmPassword) {
+    setState(() {
+      passwordMatch = _passwordController.text == confirmPassword;
+    });
+  }
+
+  Widget _passwordRule(String text, bool isValid) {
+    return Row(
+      children: [
+        Icon(
+          isValid ? Icons.check_circle : Icons.cancel,
+          size: 16,
+          color: isValid ? Colors.green : Colors.red,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: TextStyle(
+            color: isValid ? Colors.green : Colors.red,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> signUp() async {
@@ -109,6 +149,19 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
           title: Text('Terms & Conditions'),
           content: Text(
             'You must agree to the terms and conditions to continue.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!hasMinLength || !hasUppercase || !hasNumber || !passwordMatch) {
+      showDialog(
+        context: context,
+        builder: (_) => const AlertDialog(
+          title: Text('Weak Password'),
+          content: Text(
+            'Password must be at least 6 characters, include an uppercase letter, a number, and match the confirm password.',
           ),
         ),
       );
@@ -940,6 +993,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                       child: TextField(
                         controller: _passwordController,
                         obscureText: _obsecurePassword,
+                        onChanged: _checkPassword,
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           filled: true,
@@ -953,15 +1007,14 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obsecureConfirmPassword
+                              _obsecurePassword
                                   ? Icons.visibility_off
                                   : Icons.visibility,
                               color: Colors.black,
                             ),
                             onPressed: () {
                               setState(() {
-                                _obsecureConfirmPassword =
-                                    !_obsecureConfirmPassword;
+                                _obsecurePassword = !_obsecurePassword;
                               });
                             },
                           ),
@@ -982,6 +1035,20 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                           ),
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _passwordRule("At least 6 characters", hasMinLength),
+                        _passwordRule(
+                          "At least 1 uppercase letter",
+                          hasUppercase,
+                        ),
+                        _passwordRule("At least 1 number", hasNumber),
+                        _passwordRule("Password match", passwordMatch),
+                      ],
                     ),
                   ],
                 ),
@@ -1009,6 +1076,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                       child: TextField(
                         controller: _confirmpasswordController,
                         obscureText: _obsecureConfirmPassword,
+                        onChanged: _checkConfirmPassword,
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           filled: true,

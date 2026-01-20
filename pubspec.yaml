@@ -75,6 +75,7 @@ dependencies:
   dropdown_model_list: ^3.0.2
   mirai_dropdown_menu: ^0.0.9+1
   simple_animated_button: ^0.0.9
+  path: ^1.9.1
 
   
 

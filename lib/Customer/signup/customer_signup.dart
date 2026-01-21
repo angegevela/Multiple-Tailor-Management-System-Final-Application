@@ -38,10 +38,13 @@ class _SignupRegisterState extends State<SignupRegister> {
   bool _obsecureConfirmPassword = true;
 
   // Adding some additional security
-  bool hasMinLength = false;
-  bool hasUppercase = false;
-  bool hasNumber = false;
-  bool passwordMatch = false;
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+  bool _passwordMatch = false;
+  bool _passwordStarted = false;
+  bool _confirmpasswordStarted = false;
 
   Widget _passwordRule(String text, bool isValid) {
     return Row(
@@ -65,15 +68,18 @@ class _SignupRegisterState extends State<SignupRegister> {
 
   void _checkPassword(String password) {
     setState(() {
-      hasMinLength = password.length >= 6;
-      hasUppercase = password.contains(RegExp(r'[A-Z]'));
-      hasNumber = password.contains(RegExp(r'[0-9]'));
+      _hasMinLength = password.length >= 6;
+      _hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      _hasNumber = password.contains(RegExp(r'[0-9]'));
+      _hasSpecialChar = password.contains(
+        RegExp(r'[!@#\$%^&*()_+\-=\[\]{};:"\\|,.<>\/?]+'),
+      );
     });
   }
 
   void _checkConfirmPassword(String confirmPassword) {
     setState(() {
-      passwordMatch = _passwordController.text == confirmPassword;
+      _passwordMatch = _passwordController.text == confirmPassword;
     });
   }
 
@@ -285,7 +291,11 @@ class _SignupRegisterState extends State<SignupRegister> {
       );
       return;
     }
-    if (!hasMinLength || !hasUppercase || !hasNumber || !passwordMatch) {
+    if (!_hasMinLength ||
+        !_hasUppercase ||
+        !_hasNumber ||
+        !_hasSpecialChar ||
+        !_passwordMatch) {
       showDialog(
         context: context,
         builder: (_) => const AlertDialog(
@@ -625,7 +635,19 @@ class _SignupRegisterState extends State<SignupRegister> {
                 TextField(
                   controller: _passwordController,
                   obscureText: _obsecurePassword,
-                  onChanged: _checkPassword,
+                  // onChanged: _checkPassword,
+                  onChanged: (value) {
+                    setState(() {
+                      _passwordStarted = value.isNotEmpty;
+                      _hasMinLength = value.length >= 6;
+                      _hasUppercase = value.contains(RegExp(r'[A-Z]'));
+                      _hasNumber = value.contains(RegExp(r'[0-9]'));
+                      _hasSpecialChar = value.contains(
+                        RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]'),
+                      );
+                      _passwordMatch = value == _confirmpasswordController.text;
+                    });
+                  },
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     filled: true,
@@ -662,9 +684,43 @@ class _SignupRegisterState extends State<SignupRegister> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                _passwordRule("At least 6 characters", hasMinLength),
-                _passwordRule("At least 1 uppercase letter", hasUppercase),
-                _passwordRule("At least 1 number", hasNumber),
+                if (_passwordStarted)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Password must:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '- Be at least 6 characters',
+                        style: TextStyle(
+                          color: _hasMinLength ? Colors.green : Colors.red,
+                        ),
+                      ),
+
+                      Text(
+                        '- Include an uppercase letter',
+                        style: TextStyle(
+                          color: _hasUppercase ? Colors.green : Colors.red,
+                        ),
+                      ),
+
+                      Text(
+                        '- Include a number',
+                        style: TextStyle(
+                          color: _hasNumber ? Colors.green : Colors.red,
+                        ),
+                      ),
+
+                      Text(
+                        '- Include a special character (e.g., _ ! @ #)',
+                        style: TextStyle(
+                          color: _hasSpecialChar ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 12),
 
                 // Confirm Password
@@ -676,7 +732,13 @@ class _SignupRegisterState extends State<SignupRegister> {
                 TextField(
                   controller: _confirmpasswordController,
                   obscureText: _obsecureConfirmPassword,
-                  onChanged: _checkConfirmPassword,
+                  // onChanged: _checkConfirmPassword,
+                  onChanged: (value) {
+                    setState(() {
+                      _confirmpasswordStarted = value.isNotEmpty;
+                      _passwordMatch = value == _passwordController.text;
+                    });
+                  },
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     filled: true,
@@ -712,8 +774,12 @@ class _SignupRegisterState extends State<SignupRegister> {
                     ),
                   ),
                 ),
+                if (_confirmpasswordStarted)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [_passwordRule("Password match", _passwordMatch)],
+                  ),
                 const SizedBox(height: 6),
-                _passwordRule("Password match", passwordMatch),
                 // Terms & Conditions
                 const SizedBox(height: 12),
                 Row(

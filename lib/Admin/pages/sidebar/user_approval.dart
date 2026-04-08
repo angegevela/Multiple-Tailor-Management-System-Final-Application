@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:photo_view/photo_view.dart';
 import 'package:simple_animated_button/elevated_layer_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/menu.dart';
+import 'package:threadhub_system/main.dart';
 
 class AdminUserApprovalFrame extends StatefulWidget {
   const AdminUserApprovalFrame({super.key});
@@ -17,10 +19,11 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
 
   final List<String> roles = ['Tailor', 'Customer', 'All'];
 
-  Future<void> approveUser(String userId) async {
+  Future<void> approveUser(String userId, String email) async {
     await FirebaseFirestore.instance.collection('Users').doc(userId).update({
       'approved': true,
       'accountStatus': 'approved',
+      'emailApproved': email,
     });
     if (mounted) setState(() {});
   }
@@ -65,285 +68,65 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
 
   Widget userCard(QueryDocumentSnapshot user) {
     final role = user['role'] ?? '-';
-    final email = user['email'] ?? '-';
-    final displayName = role == 'Tailor'
-        ? '${user['ownerName'] ?? '-'} — ${user['shopName'] ?? '-'}'
-        : '${user['firstName'] ?? '-'} ${user['surname'] ?? '-'}';
-    final extraDetails = role == 'Tailor'
-        ? '${user['businessNumber'] ?? '-'}'
-        : '${user['phoneNumber'] ?? '-'}';
-    final userAddress = user['fullAddress'] ?? user['address'] ?? '-';
 
-    // Raw permit URLs from Firestore
-    final List<String> permitUrls = role == 'Tailor'
-        ? (user['businessPermits'] as List<dynamic>? ?? [])
+    if (role == 'Tailor') {
+      // Tailor Card
+      final displayName =
+          '${user['ownerName'] ?? '-'} — ${user['shopName'] ?? '-'}';
+      final extraDetails = '${user['businessNumber'] ?? '-'}';
+      final userAddress = user['fullAddress'] ?? user['address'] ?? '-';
+      final email = user['email'] ?? '-';
+
+      final List<String> permitUrls =
+          (user['businessPermits'] as List<dynamic>? ?? [])
               .whereType<String>()
-              .toList()
-        : [];
+              .toList();
 
-    // Fetch signed URLs
-    Future<List<String>> getSignedPermitUrls() async {
-      List<String> signedUrls = [];
-      for (var url in permitUrls) {
-        final path = _extractRelativePath(url);
-        if (path.isNotEmpty) {
-          final signedUrl = await getSignedUrl(path);
-          if (signedUrl != null) signedUrls.add(signedUrl);
+      Future<List<String>> getSignedPermitUrls() async {
+        List<String> signedUrls = [];
+        for (var url in permitUrls) {
+          final path = _extractRelativePath(url);
+          if (path.isNotEmpty) {
+            final signedUrl = await getSignedUrl(path);
+            if (signedUrl != null) signedUrls.add(signedUrl);
+          }
         }
+        return signedUrls;
       }
-      return signedUrls;
-    }
 
-    return AnimatedOpacity(
-      opacity: 1.0,
-      duration: const Duration(milliseconds: 500),
-      child: Card(
-        elevation: 8,
-        margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [const Color(0xFF547792).withAlpha(25), Colors.white],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with Name and Role Icon
-                Row(
-                  children: [
-                    Icon(
-                      role == 'Tailor' ? Icons.business : Icons.person,
-                      color: const Color(0xFF6082B6),
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        displayName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2C3E50),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(color: Colors.grey, thickness: 0.5),
+      return _buildTailorCard(
+        displayName,
+        extraDetails,
+        userAddress,
+        email,
+        permitUrls,
+        getSignedPermitUrls,
+        user.id,
+      );
+    } else if (role == 'Customer') {
+      // Customer Card
+      final displayName =
+          '${user['firstName'] ?? '-'} ${user['surname'] ?? '-'}';
+      final extraDetails = (user['phoneNumber'] ?? '-').toString();
+      final userAddress = user['fullAddress'] ?? user['address'] ?? '-';
+      final email = user['email'] ?? '-';
 
-                // Personal Information Section
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoRow(Icons.location_on, 'Address', userAddress),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(Icons.work, 'Role', role),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(Icons.email, 'Email', email),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(Icons.phone, 'Phone', extraDetails),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // Business Permits Section (Tailors only)
-                if (role == 'Tailor' && permitUrls.isNotEmpty) ...[
-                  Row(
-                    children: [
-                      Icon(Icons.description, color: const Color(0xFF6082B6)),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Business Permits',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2C3E50),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: FutureBuilder<List<String>>(
-                      future: getSignedPermitUrls(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return Text(
-                            'No permits available',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          );
-                        }
-                        final signedUrls = snapshot.data!;
-                        return SizedBox(
-                          height: 200,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: signedUrls.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  width: 200,
-                                  decoration: BoxDecoration(
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(25),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Image.network(
-                                    signedUrls[index],
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, progress) {
-                                      if (progress == null) return child;
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    },
-                                    errorBuilder: (_, __, ___) => Container(
-                                      alignment: Alignment.center,
-                                      color: Colors.grey[200],
-                                      child: Text(
-                                        'Permit not accessible',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedLayerButton(
-                      buttonWidth: 120,
-                      buttonHeight: 50,
-                      onClick: () async {
-                        await approveUser(user.id);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('$displayName approved'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                      },
-                      baseDecoration: BoxDecoration(
-                        color: Colors.green[700],
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.green.withAlpha(76),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      topDecoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      topLayerChild: Text(
-                        'Approve',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      animationDuration: null,
-                      animationCurve: null,
-                    ),
-                    const SizedBox(width: 20),
-                    ElevatedLayerButton(
-                      buttonWidth: 120,
-                      buttonHeight: 50,
-                      onClick: () async {
-                        await rejectUser(user.id);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('$displayName rejected'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      baseDecoration: BoxDecoration(
-                        color: Colors.red[700],
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withAlpha(76),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      topDecoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      topLayerChild: Text(
-                        'Reject',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      animationDuration: null,
-                      animationCurve: null,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+      return _buildCustomerCard(
+        displayName,
+        extraDetails,
+        userAddress,
+        email,
+        user.id,
+      );
+    } else {
+      // Fallback For Any Unknown Role(Any glitch happens)
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Unknown user role'),
         ),
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
@@ -365,6 +148,216 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTailorCard(
+    String displayName,
+    String extraDetails,
+    String userAddress,
+    String email,
+    List<String> permitUrls,
+    Future<List<String>> Function() getSignedPermitUrls,
+    String userId,
+  ) {
+    return Card(
+      elevation: 8,
+      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.business, color: const Color(0xFF6082B6), size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    displayName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2C3E50),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildInfoRow(Icons.location_on, 'Address', userAddress),
+            _buildInfoRow(Icons.email, 'Email', email),
+            _buildInfoRow(Icons.phone, 'Phone', extraDetails),
+            const SizedBox(height: 12),
+            // Business Permits
+            if (permitUrls.isNotEmpty)
+              FutureBuilder<List<String>>(
+                future: getSignedPermitUrls(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final signedUrls = snapshot.data ?? [];
+                  return SizedBox(
+                    height: 200,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: signedUrls.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        return _adjustingImage(signedUrls[index]);
+                      },
+                    ),
+                  );
+                },
+              ),
+            const SizedBox(height: 20),
+            _buildApprovalButtons(userId, displayName, email),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerCard(
+    String displayName,
+    String extraDetails,
+    String userAddress,
+    String email,
+    String userId,
+  ) {
+    return Card(
+      elevation: 8,
+      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person, color: const Color(0xFF6082B6), size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    displayName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2C3E50),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildInfoRow(Icons.location_on, 'Address', userAddress),
+            _buildInfoRow(Icons.email, 'Email', email),
+            _buildInfoRow(Icons.phone, 'Phone', extraDetails),
+            const SizedBox(height: 20),
+            _buildApprovalButtons(userId, displayName, email),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _adjustingImage(String imageUrl) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: GestureDetector(
+        onTap: () {
+          showDialog(
+            context: navigatorKey.currentContext!,
+            builder: (_) => Dialog(
+              insetPadding: EdgeInsets.zero,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                color: Colors.black.withOpacity(0.8),
+                child: PhotoView(
+                  imageProvider: NetworkImage(imageUrl),
+                  backgroundDecoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.8),
+                  ),
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 2,
+                  initialScale: PhotoViewComputedScale.contained,
+                ),
+              ),
+            ),
+          );
+        },
+        child: Image.network(imageUrl, width: 200, fit: BoxFit.cover),
+      ),
+    );
+  }
+
+  Widget _buildApprovalButtons(
+    String userId,
+    String displayName,
+    String email,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ElevatedLayerButton(
+          buttonWidth: 120,
+          buttonHeight: 50,
+          onClick: () async {
+            await approveUser(userId, email);
+            ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+              SnackBar(
+                content: Text('$displayName approved'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          baseDecoration: BoxDecoration(
+            color: Colors.green[700],
+            borderRadius: BorderRadius.circular(10),
+          ),
+          topDecoration: BoxDecoration(
+            color: Colors.green,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          topLayerChild: const Text(
+            'Approve',
+            style: TextStyle(color: Colors.white),
+          ),
+          animationDuration: null,
+          animationCurve: null,
+        ),
+        const SizedBox(width: 20),
+        ElevatedLayerButton(
+          buttonWidth: 120,
+          buttonHeight: 50,
+          onClick: () async {
+            await rejectUser(userId);
+            ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+              SnackBar(
+                content: Text('$displayName rejected'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+          baseDecoration: BoxDecoration(
+            color: Colors.red[700],
+            borderRadius: BorderRadius.circular(10),
+          ),
+          topDecoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          topLayerChild: const Text(
+            'Reject',
+            style: TextStyle(color: Colors.white),
+          ),
+          animationDuration: null,
+          animationCurve: null,
         ),
       ],
     );

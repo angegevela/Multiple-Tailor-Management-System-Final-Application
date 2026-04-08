@@ -131,12 +131,12 @@ class _TailorResultsPageState extends State<TailorResultsPage> {
         );
         if (altSnapshot.docs.isNotEmpty) return altSnapshot.docs;
       } catch (e) {
-        debugPrint("❌ Fallback reviews fetch failed: $e");
+        debugPrint("Fallback reviews fetch failed: $e");
       }
 
       return [];
     } catch (e) {
-      debugPrint("❌ Error fetching reviews for $tailorUid: $e");
+      debugPrint("Error fetching reviews for $tailorUid: $e");
       return [];
     }
   }
@@ -156,7 +156,7 @@ class _TailorResultsPageState extends State<TailorResultsPage> {
       );
       return snapshot.docs;
     } catch (e) {
-      debugPrint("❌ Error loading portfolio for $tailorUid: $e");
+      debugPrint("Error loading portfolio for $tailorUid: $e");
       return [];
     }
   }

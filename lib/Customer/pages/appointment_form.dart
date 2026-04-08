@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:threadhub_system/Customer/pages/Measurement%20Method/manual_measurement.dart';
 import 'package:threadhub_system/Customer/pages/calendar_appoint.dart';
@@ -15,6 +16,7 @@ import 'package:threadhub_system/Customer/pages/product%20status/receipt/appoint
 import 'package:threadhub_system/Customer/pages/product%20status/receipt/customer_receipt.dart';
 import 'package:path/path.dart' as p;
 import 'package:mirai_dropdown_menu/mirai_dropdown_menu.dart';
+import 'dart:convert';
 
 class AppointmentFormPage extends StatefulWidget {
   final Map<String, Map<String, String>> measurements;
@@ -80,6 +82,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     _receivedMeasurements = widget.measurements;
     _measurementType = widget.measurementType;
 
+    _loadDraft();
     if (widget.usedMeasurementId != null) {
       _loadUsedMeasurement();
     }
@@ -112,6 +115,94 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     } catch (e) {
       debugPrint("Error loading used measurement: $e");
     }
+  }
+
+  // Intact the data within the application whenever the user is leaving unless remove
+  Map<String, dynamic> _getFormData() {
+    return {
+      //Personal Information Data
+      "fullName": _fullNameController.text,
+      "phone": _phonenumberController.text,
+      "garment": _garmentSpecController.text,
+      "services": _servicesController.text,
+      "quantity": _quantityController.text,
+      "message": _messageController.text,
+      "selectedService": _selectedService,
+
+      //Appointment Datas
+      "appointmentDateTime": appointmentDateTime?.toIso8601String(),
+      "dueDateTime": dueDateTime?.toIso8601String(),
+      "priority": priority,
+      "duepriority": duepriority,
+
+      //Customization Datas
+      "customizationDescription": _customizationDescription,
+      "uploadedImages": _uploadedImages,
+
+      //Measurment Datas
+      "measurementType": _selectedType?.toString(),
+      "manualMeasurements": _receivedMeasurements,
+      "manualMeasurementType": _measurementTypeFromManual,
+    };
+  }
+
+  //Safe Draft
+  Future<void> _saveDraft() async {
+    final preferences = await SharedPreferences.getInstance();
+
+    final data = _getFormData();
+    final jsonString = jsonEncode(data);
+
+    await preferences.setString('appointment_draft', jsonString);
+  }
+
+  //Re-load everything from datas
+  Future<void> _loadDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString('appointment_draft');
+
+    if (jsonString == null) return;
+
+    final data = jsonDecode(jsonString);
+
+    setState(() {
+      _fullNameController.text = data["fullName"] ?? '';
+      _phonenumberController.text = data["phone"] ?? '';
+      _garmentSpecController.text = data["garment"] ?? '';
+      _messageController.text = data["message"] ?? '';
+
+      _selectedService = data["selectedService"] ?? '';
+
+      if (data["appointmentDateTime"] != null) {
+        appointmentDateTime = DateTime.parse(data["appointmentDateTime"]);
+      }
+
+      if (data["dueDateTime"] != null) {
+        dueDateTime = DateTime.parse(data["dueDateTime"]);
+      }
+
+      priority = data["priority"];
+      duepriority = data["duepriority"];
+
+      _customizationDescription = data["customizationDescription"];
+      _uploadedImages = List<String>.from(data["uploadedImages"] ?? []);
+
+      _measurementTypeFromManual = data["manualMeasurementType"];
+
+      if (data["measurementType"] != null) {
+        if (data["measurementType"].contains("manual")) {
+          _selectedType = MeasurementType.manual;
+        } else {
+          _selectedType = MeasurementType.assisted;
+        }
+      }
+
+      _receivedMeasurements = Map<String, Map<String, String>>.from(
+        (data["manualMeasurements"] ?? {}).map(
+          (k, v) => MapEntry(k, Map<String, String>.from(v)),
+        ),
+      );
+    });
   }
 
   // Textfield Controllers
@@ -195,13 +286,13 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
         tailorAssigned: null,
       );
       if (!RegExp(r'^[0-9]+$').hasMatch(_phonenumberController.text.trim())) {
-       if (mounted){
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Phone number should contain numbers only."),
-          ),
-        );
-       } 
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Phone number should contain numbers only."),
+            ),
+          );
+        }
         return null;
       }
       await docRef.set(appointmentData.toMap());
@@ -215,12 +306,91 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
 
   Map<String, Map<String, String>> _receivedMeasurements = {};
   bool _isloading = false;
+  // Notice for first backout on arrow button
+  Future<void> _handleBackPressed() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool hasBeenNotice = prefs.getBool('hasSeenBackNotice') ?? false;
+
+    if (!hasBeenNotice) {
+      // First Notice --> to show the dialog
+      final shouldLeave = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Text(
+            "Notice",
+            style: GoogleFonts.songMyung(fontSize: 25),
+            textAlign: TextAlign.center,
+          ),
+          content: Text(
+            "If you go back, your data will be saved automitically.",
+            style: GoogleFonts.songMyung(fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.blueGrey,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    "Stay",
+                    style: GoogleFonts.songMyung(fontSize: 16),
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFCA6180),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    "Leave",
+                    style: GoogleFonts.songMyung(fontSize: 16),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      if (shouldLeave == true) {
+        await prefs.setBool('hasSeenBackNotice', true);
+        await _saveDraft();
+        Navigator.pop(context);
+      } else {
+        //After One Time --> Directs to no dialog to show
+        await _saveDraft();
+        Navigator.pop(context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final fontSize = context.watch<FontProvider>().fontSize;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF6082B6),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: _handleBackPressed,
+        ),
         title: Text(
           'Appointment Booking Form',
           style: GoogleFonts.notoSerifOldUyghur(
@@ -464,9 +634,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                           ),
                         ),
                         children: _servicesoffered,
-                        valueNotifier: ValueNotifier<String>(
-                          _selectedService,
-                        ),
+                        valueNotifier: ValueNotifier<String>(_selectedService),
 
                         onChanged: (value) {
                           setState(() {
@@ -721,7 +889,6 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                               child: ElevatedButton(
                                                 onPressed: () async {
                                                   Navigator.of(context).pop();
-
                                                   final result =
                                                       await Navigator.push(
                                                         context,
@@ -789,6 +956,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                             Expanded(
                                               child: ElevatedButton(
                                                 onPressed: () async {
+                                                  Navigator.of(context).pop();
                                                   final result =
                                                       await Navigator.push(
                                                         context,
@@ -948,7 +1116,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         ),
 
                       //Show Product Due Date if set
-                      if (dueDateTime != null && duepriority != null)
+                      if (dueDateTime != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 12.0),
                           child: Container(

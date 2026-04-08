@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
               backgroundColor: Colors.blueGrey[100],
               title: Text(
                 "Login Error",
-                style: GoogleFonts.songMyung(fontSize: 23),
+                style: GoogleFonts.playfairDisplay(fontSize: 23),
                 textAlign: TextAlign.center,
               ),
               content: Text(
@@ -108,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
             backgroundColor: Colors.blueGrey[100],
             title: Text(
               'Login Error',
-              style: GoogleFonts.songMyung(
+              style: GoogleFonts.playfairDisplay(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -160,7 +160,7 @@ class _LoginPageState extends State<LoginPage> {
           builder: (context) => AlertDialog(
             title: Text(
               "Role Error",
-              style: GoogleFonts.songMyung(
+              style: GoogleFonts.playfairDisplay(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -188,7 +188,11 @@ class _LoginPageState extends State<LoginPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Login Failed'),
+            title: Text(
+              'Login Failed',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
+            ),
             content: Text(
               e.message ?? 'An error occurred.',
               style: GoogleFonts.songMyung(fontSize: 16),
@@ -213,7 +217,7 @@ class _LoginPageState extends State<LoginPage> {
           backgroundColor: Colors.blueGrey[100],
           title: Text(
             'Incorrect Email',
-            style: GoogleFonts.songMyung(
+            style: GoogleFonts.playfairDisplay(
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),

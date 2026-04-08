@@ -76,6 +76,8 @@ dependencies:
   mirai_dropdown_menu: ^0.0.9+1
   simple_animated_button: ^0.0.9
   path: ^1.9.1
+  photo_view: ^0.15.0
+  shared_preferences: ^2.5.3
 
   
 

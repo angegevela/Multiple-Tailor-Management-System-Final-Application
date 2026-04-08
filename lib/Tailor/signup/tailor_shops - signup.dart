@@ -64,10 +64,14 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
   bool _obsecureConfirmPassword = true;
 
   // Adding some additional security
-  bool hasMinLength = false;
-  bool hasUppercase = false;
-  bool hasNumber = false;
-  bool passwordMatch = false;
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+  bool _passwordMatch = false;
+
+  bool _passwordStarted = false;
+  bool _confirmpasswordStarted = false;
 
   // Selected Barangay
   String? selectedBarangay;
@@ -86,15 +90,17 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
   void _checkPassword(String password) {
     setState(() {
-      hasMinLength = password.length >= 6;
-      hasUppercase = password.contains(RegExp(r'[A-Z]'));
-      hasNumber = password.contains(RegExp(r'[0-9]'));
+      _hasMinLength = password.length >= 6;
+      _hasUppercase = password.contains(RegExp(r'[A-Z]'));
+      _hasNumber = password.contains(RegExp(r'[0-9]'));
+      _hasSpecialChar = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]'));
+      _passwordMatch = password == _confirmpasswordController.text;
     });
   }
 
   void _checkConfirmPassword(String confirmPassword) {
     setState(() {
-      passwordMatch = _passwordController.text == confirmPassword;
+      _passwordMatch = _passwordController.text == confirmPassword;
     });
   }
 
@@ -138,6 +144,9 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
         _password ||
         _confirmPass ||
         _barangay) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill all required fields.')),
+      );
       return;
     }
 
@@ -155,7 +164,11 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
       return;
     }
 
-    if (!hasMinLength || !hasUppercase || !hasNumber || !passwordMatch) {
+    if (!_hasMinLength ||
+        !_hasUppercase ||
+        !_hasNumber ||
+        !_passwordMatch ||
+        !_hasSpecialChar) {
       showDialog(
         context: context,
         builder: (_) => const AlertDialog(
@@ -332,71 +345,66 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your profile was created successfully.')),
-      );
+    
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
+        );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
-      );
-
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 10,
-          backgroundColor: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle_outline, color: Colors.green, size: 60),
-                const SizedBox(height: 15),
-                Text(
-                  'Sign Up Successful',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Welcome to ThreadHub',
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Text(
-                      'Okay',
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      // showDialog(
+      //   context: context,
+      //   builder: (context) => Dialog(
+      //     shape: RoundedRectangleBorder(
+      //       borderRadius: BorderRadius.circular(20),
+      //     ),
+      //     elevation: 10,
+      //     backgroundColor: Colors.white,
+      //     child: Padding(
+      //       padding: const EdgeInsets.all(20.0),
+      //       child: Column(
+      //         mainAxisSize: MainAxisSize.min,
+      //         children: [
+      //           Icon(Icons.check_circle_outline, color: Colors.green, size: 60),
+      //           const SizedBox(height: 15),
+      //           Text(
+      //             'Sign Up Successful',
+      //             style: TextStyle(
+      //               fontSize: 22,
+      //               fontWeight: FontWeight.bold,
+      //               color: Colors.black87,
+      //             ),
+      //             textAlign: TextAlign.center,
+      //           ),
+      //           const SizedBox(height: 10),
+      //           Text(
+      //             'Welcome to ThreadHub',
+      //             style: TextStyle(fontSize: 16, color: Colors.black54),
+      //             textAlign: TextAlign.center,
+      //           ),
+      //           const SizedBox(height: 20),
+      //           ElevatedButton(
+      //             onPressed: () {
+      //               Navigator.of(context).pop();
+      //             },
+      //             style: ElevatedButton.styleFrom(
+      //               backgroundColor: Colors.green,
+      //               shape: RoundedRectangleBorder(
+      //                 borderRadius: BorderRadius.circular(10),
+      //               ),
+      //             ),
+      //             child: const Padding(
+      //               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      //               child: Text(
+      //                 'Okay',
+      //                 style: TextStyle(fontSize: 16, color: Colors.white),
+      //               ),
+      //             ),
+      //           ),
+      //         ],
+      //       ),
+      //     ),
+      //   ),
+      // );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       String message;
@@ -993,7 +1001,20 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                       child: TextField(
                         controller: _passwordController,
                         obscureText: _obsecurePassword,
-                        onChanged: _checkPassword,
+                        // onChanged: _checkPassword,
+                        onChanged: (value) {
+                          setState(() {
+                            _passwordStarted = value.isNotEmpty;
+                            _hasMinLength = value.length >= 6;
+                            _hasUppercase = value.contains(RegExp(r'[A-Z]'));
+                            _hasNumber = value.contains(RegExp(r'[0-9]'));
+                            _hasSpecialChar = value.contains(
+                              RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]'),
+                            );
+                            _passwordMatch =
+                                value == _confirmpasswordController.text;
+                          });
+                        },
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           filled: true,
@@ -1037,200 +1058,241 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                       ),
                     ),
                     const SizedBox(height: 6),
+                    if (_passwordStarted)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Password must:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '- Be at least 6 characters',
+                            style: TextStyle(
+                              color: _hasMinLength ? Colors.green : Colors.red,
+                            ),
+                          ),
 
+                          Text(
+                            '- Include an uppercase letter',
+                            style: TextStyle(
+                              color: _hasUppercase ? Colors.green : Colors.red,
+                            ),
+                          ),
+
+                          Text(
+                            '- Include a number',
+                            style: TextStyle(
+                              color: _hasNumber ? Colors.green : Colors.red,
+                            ),
+                          ),
+
+                          Text(
+                            '- Include a special character (e.g., _ ! @ #)',
+                            style: TextStyle(
+                              color: _hasSpecialChar
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                    SizedBox(height: 15),
+
+                    //Confirm Password
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _passwordRule("At least 6 characters", hasMinLength),
-                        _passwordRule(
-                          "At least 1 uppercase letter",
-                          hasUppercase,
+                        Text(
+                          'Confirm Password',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        _passwordRule("At least 1 number", hasNumber),
-                        _passwordRule("Password match", passwordMatch),
+
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(),
+                          child: TextField(
+                            controller: _confirmpasswordController,
+                            obscureText: _obsecureConfirmPassword,
+                            // onChanged: _checkConfirmPassword,
+                            onChanged: (value) {
+                              setState(() {
+                                _confirmpasswordStarted = value.isNotEmpty;
+                                _passwordMatch =
+                                    value == _passwordController.text;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              filled: true,
+                              fillColor: const Color(0xFFE1EBEE),
+                              labelText: 'Re-enter password',
+                              contentPadding: const EdgeInsets.fromLTRB(
+                                18,
+                                22,
+                                0,
+                                2,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obsecureConfirmPassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.black,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obsecureConfirmPassword =
+                                        !_obsecureConfirmPassword;
+                                  });
+                                },
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(
+                                  color: Colors.black,
+                                  width: 2.5,
+                                ),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
 
-              SizedBox(height: 15),
-
-              //Confirm Password
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Confirm Password',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    if (_confirmpasswordStarted)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _passwordRule("Password match", _passwordMatch),
+                        ],
                       ),
-                    ),
-
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(),
-                      child: TextField(
-                        controller: _confirmpasswordController,
-                        obscureText: _obsecureConfirmPassword,
-                        onChanged: _checkConfirmPassword,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          filled: true,
-                          fillColor: const Color(0xFFE1EBEE),
-                          labelText: 'Re-enter password',
-                          errorText: _confirmPass
-                              ? 'Confirm Password is required'
-                              : null,
-                          contentPadding: EdgeInsets.fromLTRB(18, 22, 44, 2),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 2.5,
-                            ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obsecureConfirmPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () {
+                    const SizedBox(height: 6),
+                    // Terms & Conditions Checkbox
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _rememberMe,
+                            onChanged: (bool? value) {
                               setState(() {
-                                _obsecureConfirmPassword =
-                                    !_obsecureConfirmPassword;
+                                _rememberMe = value ?? false;
                               });
                             },
                           ),
-                        ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () async {
+                                final accepted = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const TermsAndConditionsPage(),
+                                  ),
+                                );
+                                if (accepted == true) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _rememberMe = true;
+                                    });
+                                  }
+                                }
+                              },
+                              child: Text(
+                                'I agree to the Terms and Conditions',
+                                style: GoogleFonts.chivo(
+                                  fontSize: 14,
+                                  fontStyle: FontStyle.italic,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
 
-              // Terms & Conditions Checkbox
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
-                  children: [
-                    Checkbox(
-                      value: _rememberMe,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _rememberMe = value ?? false;
-                        });
-                      },
-                    ),
-                    Expanded(
+                    SizedBox(height: 20),
+
+                    // Sign Up Button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 15.0),
                       child: GestureDetector(
                         onTap: () async {
-                          final accepted = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const TermsAndConditionsPage(),
-                            ),
-                          );
-                          if (accepted == true) {
-                            if (mounted) {
-                              setState(() {
-                                _rememberMe = true;
-                              });
-                            }
-                          }
+                          await signUp();
+                          setState(() {});
                         },
-                        child: Text(
-                          'I agree to the Terms and Conditions',
-                          style: GoogleFonts.chivo(
-                            fontSize: 14,
-                            fontStyle: FontStyle.italic,
-                            decoration: TextDecoration.underline,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4A789E),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Sign Up',
+                              style: GoogleFonts.chakraPetch(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
+
+                    SizedBox(height: 10),
+
+                    // Redirect to Login Screen
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(15.0, 0, 15.0, 20.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  LoginPage(showRegisterPage: () {}),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF335E7A),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Have an Account? Sign In',
+                              style: GoogleFonts.chakraPetch(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 10),
                   ],
                 ),
               ),
-
-              SizedBox(height: 20),
-
-              // Sign Up Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: GestureDetector(
-                  onTap: () async {
-                    await signUp();
-                    setState(() {});
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4A789E),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Sign Up',
-                        style: GoogleFonts.chakraPetch(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 10),
-
-              // Redirect to Login Screen
-              Padding(
-                padding: const EdgeInsets.fromLTRB(15.0, 0, 15.0, 20.0),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            LoginPage(showRegisterPage: () {}),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF335E7A),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Have an Account? Sign In',
-                        style: GoogleFonts.chakraPetch(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 10),
             ],
           ),
         ),

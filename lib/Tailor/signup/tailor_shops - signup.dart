@@ -76,6 +76,10 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
   // Selected Barangay
   String? selectedBarangay;
   bool _barangay = false;
+
+  // CircularProgressIndicator
+  bool _isloading = false;
+
   @override
   void initState() {
     super.initState();
@@ -134,6 +138,7 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
       _password = _passwordController.text.trim().isEmpty;
       _confirmPass = _confirmpasswordController.text.trim().isEmpty;
       _barangay = selectedBarangay == null;
+      _isloading = true;
     });
 
     if (_shopNamer ||
@@ -246,9 +251,6 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
       if (!mounted) return;
 
-      final user = userCredential.user;
-      if (user == null) return;
-
       final supabase = Supabase.instance.client;
       final permitUrls = <String>[];
 
@@ -338,6 +340,15 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
       if (geoPoint != null) userData['location'] = geoPoint;
 
+      final user = userCredential.user;
+      if (user == null) return;
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
+      );
+
       await FirebaseFirestore.instance
           .collection('Users')
           .doc(user.uid)
@@ -345,11 +356,10 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
       if (!mounted) return;
 
-    
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
-        );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
+      );
 
       // showDialog(
       //   context: context,
@@ -429,6 +439,12 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
           content: Text(message),
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isloading = false;
+        });
+      }
     }
   }
 
@@ -602,510 +618,402 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
         backgroundColor: const Color(0xFF6082B6),
       ),
       backgroundColor: const Color(0xFFD9D9D9),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Shop Name
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Shop Name',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _shopnameController,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Color(0xFFE1EBEE),
-                        labelText: 'Enter your shop name',
-                        errorText: _shopNamer ? 'Shop name is required' : null,
-                        contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 2.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Username
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Username',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _usernameController,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        filled: true,
-                        fillColor: Color(0xFFE1EBEE),
-                        labelText: 'Enter your desired username',
-                        errorText: _username ? 'Username is required' : null,
-                        contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 2.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Owner Name
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Owner Name',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _ownerNameController,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        filled: true,
-                        fillColor: Color(0xFFE1EBEE),
-                        labelText: 'Enter the Owners Name',
-                        errorText: _ownerName
-                            ? 'Owner\'s name is required'
-                            : null,
-                        contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 2.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Business Number
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Business Phone Number',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _businessNumberController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        filled: true,
-                        fillColor: Color(0xFFE1EBEE),
-                        labelText: 'eg. +63 9123456789',
-                        prefixText: '+63 ',
-                        errorText: _businessNumber
-                            ? 'Business number is required'
-                            : null,
-                        contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 2.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Email
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Email',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        filled: true,
-                        fillColor: Color(0xFFE1EBEE),
-                        labelText: 'email@example.com',
-                        contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 2.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Address
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Barangay',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      key: _barangayKey,
-                      onTap: _toggleBarangayDropdown,
-                      child: Container(
-                        height: 56,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE1EBEE),
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: Colors.black, width: 1.5),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              selectedBarangay ?? "Select Barangay",
-                              style: GoogleFonts.palanquin(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_drop_down,
-                              size: 28,
-                              color: Colors.black,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Street / House Address TextField
-                    Text(
-                      'Street / Block / House No.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _addressController,
-                      maxLines: 2,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: const Color(0xFFE1EBEE),
-                        labelText: 'e.g. Purok 1, BLK 2, Lot 7',
-                        alignLabelWithHint: true,
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.black,
-                            width: 2.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Business Permit - photo media upload
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    Text(
-                      'Business Permit',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () async {
-                        final uploadedFiles = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => UploadMediaPage(
-                              initialFiles: _businessPermitFiles,
-                            ),
-                          ),
-                        );
-
-                        if (uploadedFiles != null) {
-                          setState(() {
-                            _businessPermitFiles = uploadedFiles;
-                            _businessPermitError = false;
-                          });
-                        }
-                      },
-
-                      child: Container(
-                        height: 50,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE1EBEE),
-                          border: Border.all(
-                            color: _businessPermitError
-                                ? Colors.red
-                                : Colors.black,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          _businessPermitFiles != null &&
-                                  _businessPermitFiles!.isNotEmpty
-                              ? "${_businessPermitFiles?.length} file(s) uploaded"
-                              : "Click To Upload Media",
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Shop Name
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text(
+                          'Shop Name',
                           style: TextStyle(
                             fontSize: 16,
-                            color: _businessPermitError
-                                ? Colors.red
-                                : Colors.grey[700],
+                            fontWeight: FontWeight.bold,
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                      ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: _shopnameController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Color(0xFFE1EBEE),
+                            labelText: 'Enter your shop name',
+                            errorText: _shopNamer
+                                ? 'Shop name is required'
+                                : null,
+                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 2.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              SizedBox(height: 10),
-
-              // Password
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Create Password',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  // Username
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text(
+                          'Username',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: _usernameController,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            filled: true,
+                            fillColor: Color(0xFFE1EBEE),
+                            labelText: 'Enter your desired username',
+                            errorText: _username
+                                ? 'Username is required'
+                                : null,
+                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 2.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(),
-                      child: TextField(
-                        controller: _passwordController,
-                        obscureText: _obsecurePassword,
-                        // onChanged: _checkPassword,
-                        onChanged: (value) {
-                          setState(() {
-                            _passwordStarted = value.isNotEmpty;
-                            _hasMinLength = value.length >= 6;
-                            _hasUppercase = value.contains(RegExp(r'[A-Z]'));
-                            _hasNumber = value.contains(RegExp(r'[0-9]'));
-                            _hasSpecialChar = value.contains(
-                              RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]'),
+                  // Owner Name
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text(
+                          'Owner Name',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: _ownerNameController,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            filled: true,
+                            fillColor: Color(0xFFE1EBEE),
+                            labelText: 'Enter the Owners Name',
+                            errorText: _ownerName
+                                ? 'Owner\'s name is required'
+                                : null,
+                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 2.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Business Number
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text(
+                          'Business Phone Number',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: _businessNumberController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            filled: true,
+                            fillColor: Color(0xFFE1EBEE),
+                            labelText: 'eg. +63 9123456789',
+                            prefixText: '+63 ',
+                            errorText: _businessNumber
+                                ? 'Business number is required'
+                                : null,
+                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 2.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Email
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text(
+                          'Email',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: _emailController,
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            filled: true,
+                            fillColor: Color(0xFFE1EBEE),
+                            labelText: 'email@example.com',
+                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 2.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Address
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text(
+                          'Barangay',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          key: _barangayKey,
+                          onTap: _toggleBarangayDropdown,
+                          child: Container(
+                            height: 56,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE1EBEE),
+                              borderRadius: BorderRadius.circular(5),
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  selectedBarangay ?? "Select Barangay",
+                                  style: GoogleFonts.palanquin(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 28,
+                                  color: Colors.black,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Street / House Address TextField
+                        Text(
+                          'Street / Block / House No.',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _addressController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFE1EBEE),
+                            labelText: 'e.g. Purok 1, BLK 2, Lot 7',
+                            alignLabelWithHint: true,
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 2.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Business Permit - photo media upload
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text(
+                          'Business Permit',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () async {
+                            final uploadedFiles = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => UploadMediaPage(
+                                  initialFiles: _businessPermitFiles,
+                                ),
+                              ),
                             );
-                            _passwordMatch =
-                                value == _confirmpasswordController.text;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          filled: true,
-                          fillColor: const Color(0xFFE1EBEE),
-                          labelText: 'Create a password',
-                          contentPadding: const EdgeInsets.fromLTRB(
-                            18,
-                            22,
-                            0,
-                            2,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obsecurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: Colors.black,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obsecurePassword = !_obsecurePassword;
-                              });
-                            },
-                          ),
 
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
+                            if (uploadedFiles != null) {
+                              setState(() {
+                                _businessPermitFiles = uploadedFiles;
+                                _businessPermitError = false;
+                              });
+                            }
+                          },
+
+                          child: Container(
+                            height: 50,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE1EBEE),
+                              border: Border.all(
+                                color: _businessPermitError
+                                    ? Colors.red
+                                    : Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(5),
                             ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.black,
-                              width: 2.5,
+                            child: Text(
+                              _businessPermitFiles != null &&
+                                      _businessPermitFiles!.isNotEmpty
+                                  ? "${_businessPermitFiles?.length} file(s) uploaded"
+                                  : "Click To Upload Media",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: _businessPermitError
+                                    ? Colors.red
+                                    : Colors.grey[700],
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            borderRadius: BorderRadius.circular(5),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    if (_passwordStarted)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Password must:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            '- Be at least 6 characters',
-                            style: TextStyle(
-                              color: _hasMinLength ? Colors.green : Colors.red,
-                            ),
-                          ),
+                  ),
 
-                          Text(
-                            '- Include an uppercase letter',
-                            style: TextStyle(
-                              color: _hasUppercase ? Colors.green : Colors.red,
-                            ),
-                          ),
+                  SizedBox(height: 10),
 
-                          Text(
-                            '- Include a number',
-                            style: TextStyle(
-                              color: _hasNumber ? Colors.green : Colors.red,
-                            ),
-                          ),
-
-                          Text(
-                            '- Include a special character (e.g., _ ! @ #)',
-                            style: TextStyle(
-                              color: _hasSpecialChar
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                    SizedBox(height: 15),
-
-                    //Confirm Password
-                    Column(
+                  // Password
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Confirm Password',
+                          'Create Password',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -1116,21 +1024,29 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                         Container(
                           decoration: BoxDecoration(),
                           child: TextField(
-                            controller: _confirmpasswordController,
-                            obscureText: _obsecureConfirmPassword,
-                            // onChanged: _checkConfirmPassword,
+                            controller: _passwordController,
+                            obscureText: _obsecurePassword,
+                            // onChanged: _checkPassword,
                             onChanged: (value) {
                               setState(() {
-                                _confirmpasswordStarted = value.isNotEmpty;
+                                _passwordStarted = value.isNotEmpty;
+                                _hasMinLength = value.length >= 6;
+                                _hasUppercase = value.contains(
+                                  RegExp(r'[A-Z]'),
+                                );
+                                _hasNumber = value.contains(RegExp(r'[0-9]'));
+                                _hasSpecialChar = value.contains(
+                                  RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]'),
+                                );
                                 _passwordMatch =
-                                    value == _passwordController.text;
+                                    value == _confirmpasswordController.text;
                               });
                             },
                             decoration: InputDecoration(
                               border: InputBorder.none,
                               filled: true,
                               fillColor: const Color(0xFFE1EBEE),
-                              labelText: 'Re-enter password',
+                              labelText: 'Create a password',
                               contentPadding: const EdgeInsets.fromLTRB(
                                 18,
                                 22,
@@ -1139,18 +1055,18 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obsecureConfirmPassword
+                                  _obsecurePassword
                                       ? Icons.visibility_off
                                       : Icons.visibility,
                                   color: Colors.black,
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _obsecureConfirmPassword =
-                                        !_obsecureConfirmPassword;
+                                    _obsecurePassword = !_obsecurePassword;
                                   });
                                 },
                               ),
+
                               enabledBorder: OutlineInputBorder(
                                 borderSide: const BorderSide(
                                   color: Colors.black,
@@ -1168,134 +1084,262 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                        const SizedBox(height: 6),
+                        if (_passwordStarted)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Password must:',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '- Be at least 6 characters',
+                                style: TextStyle(
+                                  color: _hasMinLength
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
 
-                    if (_confirmpasswordStarted)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _passwordRule("Password match", _passwordMatch),
-                        ],
-                      ),
-                    const SizedBox(height: 6),
-                    // Terms & Conditions Checkbox
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: _rememberMe,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _rememberMe = value ?? false;
-                              });
-                            },
+                              Text(
+                                '- Include an uppercase letter',
+                                style: TextStyle(
+                                  color: _hasUppercase
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+
+                              Text(
+                                '- Include a number',
+                                style: TextStyle(
+                                  color: _hasNumber ? Colors.green : Colors.red,
+                                ),
+                              ),
+
+                              Text(
+                                '- Include a special character (e.g., _ ! @ #)',
+                                style: TextStyle(
+                                  color: _hasSpecialChar
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+                            ],
                           ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () async {
-                                final accepted = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const TermsAndConditionsPage(),
+
+                        SizedBox(height: 15),
+
+                        //Confirm Password
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Confirm Password',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            const SizedBox(height: 8),
+                            Container(
+                              decoration: BoxDecoration(),
+                              child: TextField(
+                                controller: _confirmpasswordController,
+                                obscureText: _obsecureConfirmPassword,
+                                // onChanged: _checkConfirmPassword,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _confirmpasswordStarted = value.isNotEmpty;
+                                    _passwordMatch =
+                                        value == _passwordController.text;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  filled: true,
+                                  fillColor: const Color(0xFFE1EBEE),
+                                  labelText: 'Re-enter password',
+                                  contentPadding: const EdgeInsets.fromLTRB(
+                                    18,
+                                    22,
+                                    0,
+                                    2,
                                   ),
-                                );
-                                if (accepted == true) {
-                                  if (mounted) {
-                                    setState(() {
-                                      _rememberMe = true;
-                                    });
-                                  }
-                                }
-                              },
-                              child: Text(
-                                'I agree to the Terms and Conditions',
-                                style: GoogleFonts.chivo(
-                                  fontSize: 14,
-                                  fontStyle: FontStyle.italic,
-                                  decoration: TextDecoration.underline,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obsecureConfirmPassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.black,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obsecureConfirmPassword =
+                                            !_obsecureConfirmPassword;
+                                      });
+                                    },
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: Colors.black,
+                                      width: 1.5,
+                                    ),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: Colors.black,
+                                      width: 2.5,
+                                    ),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        if (_confirmpasswordStarted)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _passwordRule("Password match", _passwordMatch),
+                            ],
+                          ),
+                        const SizedBox(height: 6),
+                        // Terms & Conditions Checkbox
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: _rememberMe,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    _rememberMe = value ?? false;
+                                  });
+                                },
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final accepted = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const TermsAndConditionsPage(),
+                                      ),
+                                    );
+                                    if (accepted == true) {
+                                      if (mounted) {
+                                        setState(() {
+                                          _rememberMe = true;
+                                        });
+                                      }
+                                    }
+                                  },
+                                  child: Text(
+                                    'I agree to the Terms and Conditions',
+                                    style: GoogleFonts.chivo(
+                                      fontSize: 14,
+                                      fontStyle: FontStyle.italic,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: 20),
+
+                        // Sign Up Button
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                          child: GestureDetector(
+                            onTap: () async {
+                              await signUp();
+                              setState(() {});
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4A789E),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Sign Up',
+                                  style: GoogleFonts.chakraPetch(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
 
-                    SizedBox(height: 20),
+                        SizedBox(height: 10),
 
-                    // Sign Up Button
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                      child: GestureDetector(
-                        onTap: () async {
-                          await signUp();
-                          setState(() {});
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4A789E),
-                            borderRadius: BorderRadius.circular(12),
+                        // Redirect to Login Screen
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            15.0,
+                            0,
+                            15.0,
+                            20.0,
                           ),
-                          child: Center(
-                            child: Text(
-                              'Sign Up',
-                              style: GoogleFonts.chakraPetch(
-                                color: Colors.black,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      LoginPage(showRegisterPage: () {}),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF335E7A),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Have an Account? Sign In',
+                                  style: GoogleFonts.chakraPetch(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-
-                    SizedBox(height: 10),
-
-                    // Redirect to Login Screen
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(15.0, 0, 15.0, 20.0),
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  LoginPage(showRegisterPage: () {}),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF335E7A),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Have an Account? Sign In',
-                              style: GoogleFonts.chakraPetch(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
+                        if (_isloading)
+                          Container(
+                            color: Colors.black.withOpacity(0.5),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
                             ),
                           ),
-                        ),
-                      ),
+                        SizedBox(height: 10),
+                      ],
                     ),
-
-                    SizedBox(height: 10),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -25,12 +25,19 @@ class ApprovalPendingScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 30),
             Image.network(
               'https://media.tenor.com/_EvegJwzPa0AAAAi/hourglass-kids-choice-awards.gif',
               height: 300,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return SizedBox(
+                  height: 300,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              },
             ),
             const SizedBox(height: 20),
             Text(

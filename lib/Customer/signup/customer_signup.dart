@@ -255,6 +255,9 @@ class _SignupRegisterState extends State<SignupRegister> {
   bool passwordConfirmed() =>
       _passwordController.text.trim() == _confirmpasswordController.text.trim();
 
+  // CircularProgressIndicator
+  bool _isloading = false;
+
   // Sign Up method (simplified for brevity)
   Future signUp() async {
     if (selectedBarangay == null) {
@@ -308,6 +311,10 @@ class _SignupRegisterState extends State<SignupRegister> {
       return;
     }
     if (passwordConfirmed()) {
+      setState(() {
+        _isloading = true;
+      });
+
       try {
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
@@ -319,6 +326,8 @@ class _SignupRegisterState extends State<SignupRegister> {
           String fullAddress =
               "${_addressController.text.trim()}, $selectedBarangay, Puerto Princesa City, 5300, Philippines";
 
+          //Approval Page Navigation
+          if (!mounted) return;
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -420,463 +429,533 @@ class _SignupRegisterState extends State<SignupRegister> {
         backgroundColor: const Color(0xFF6082B6),
       ),
       backgroundColor: const Color(0xFFEEEEEE),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          reverse: true,
-          child: Padding(
-            padding: const EdgeInsets.all(15.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // First Name
-                Text(
-                  'First Name',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 5),
-                TextField(
-                  controller: _firstnameController,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: const Color(0xFFE1EBEE),
-                    labelText: 'Enter your first name',
-                    contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 1.5,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              reverse: true,
+              child: Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // First Name
+                    Text(
+                      'First Name',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                      borderRadius: BorderRadius.circular(5),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Surname
-                Text(
-                  'Surname',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 5),
-                TextField(
-                  controller: _surnameController,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: const Color(0xFFE1EBEE),
-                    labelText: 'Enter your surname',
-                    contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Username
-                Text(
-                  'Username',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 5),
-                TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: const Color(0xFFE1EBEE),
-                    labelText: 'Enter your desired username',
-                    contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Email
-                Text(
-                  'Email',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 5),
-                TextField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: const Color(0xFFE1EBEE),
-                    labelText: 'Enter your email',
-                    contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 2),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Barangay Dropdown
-                Text(
-                  'Barangay',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  key: _barangayKey,
-                  onTap: _toggleBarangayDropdown,
-                  child: Container(
-                    height: 56,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE1EBEE),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: Colors.black, width: 1.5),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          selectedBarangay ?? "Select Barangay",
-                          style: GoogleFonts.palanquin(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
+                    const SizedBox(height: 5),
+                    TextField(
+                      controller: _firstnameController,
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Enter your first name',
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          18,
+                          22,
+                          48,
+                          2,
                         ),
-                        const Icon(
-                          Icons.arrow_drop_down,
-                          size: 28,
-                          color: Colors.black,
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Surname
+                    Text(
+                      'Surname',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    TextField(
+                      controller: _surnameController,
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Enter your surname',
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          18,
+                          22,
+                          48,
+                          2,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Username
+                    Text(
+                      'Username',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Enter your desired username',
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          18,
+                          22,
+                          48,
+                          2,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Email
+                    Text(
+                      'Email',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    TextField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Enter your email',
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          18,
+                          22,
+                          48,
+                          2,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Barangay Dropdown
+                    Text(
+                      'Barangay',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      key: _barangayKey,
+                      onTap: _toggleBarangayDropdown,
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE1EBEE),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: Colors.black, width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              selectedBarangay ?? "Select Barangay",
+                              style: GoogleFonts.palanquin(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              size: 28,
+                              color: Colors.black,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Street/House No.
+                    Text(
+                      'Street / Block / House No.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _addressController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Purok 1, BLK 2, Lot 7',
+                        alignLabelWithHint: true,
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Password
+                    Text(
+                      'Password',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: _obsecurePassword,
+                      // onChanged: _checkPassword,
+                      onChanged: (value) {
+                        setState(() {
+                          _passwordStarted = value.isNotEmpty;
+                          _hasMinLength = value.length >= 6;
+                          _hasUppercase = value.contains(RegExp(r'[A-Z]'));
+                          _hasNumber = value.contains(RegExp(r'[0-9]'));
+                          _hasSpecialChar = value.contains(
+                            RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]'),
+                          );
+                          _passwordMatch =
+                              value == _confirmpasswordController.text;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Create a password',
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          18,
+                          22,
+                          44,
+                          2,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obsecurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.black,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obsecurePassword = !_obsecurePassword;
+                            });
+                          },
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (_passwordStarted)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Password must:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '- Be at least 6 characters',
+                            style: TextStyle(
+                              color: _hasMinLength ? Colors.green : Colors.red,
+                            ),
+                          ),
+
+                          Text(
+                            '- Include an uppercase letter',
+                            style: TextStyle(
+                              color: _hasUppercase ? Colors.green : Colors.red,
+                            ),
+                          ),
+
+                          Text(
+                            '- Include a number',
+                            style: TextStyle(
+                              color: _hasNumber ? Colors.green : Colors.red,
+                            ),
+                          ),
+
+                          Text(
+                            '- Include a special character (e.g., _ ! @ #)',
+                            style: TextStyle(
+                              color: _hasSpecialChar
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 12),
+
+                    // Confirm Password
+                    Text(
+                      'Confirm Password',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _confirmpasswordController,
+                      obscureText: _obsecureConfirmPassword,
+                      // onChanged: _checkConfirmPassword,
+                      onChanged: (value) {
+                        setState(() {
+                          _confirmpasswordStarted = value.isNotEmpty;
+                          _passwordMatch = value == _passwordController.text;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Re-enter password',
+                        contentPadding: const EdgeInsets.fromLTRB(18, 22, 0, 2),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obsecureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.black,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obsecureConfirmPassword =
+                                  !_obsecureConfirmPassword;
+                            });
+                          },
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    if (_confirmpasswordStarted)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _passwordRule("Password match", _passwordMatch),
+                        ],
+                      ),
+                    const SizedBox(height: 6),
+                    // Terms & Conditions
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              final accepted = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const CustTermsAndConditionsPage(),
+                                ),
+                              );
+                              if (accepted == true) {
+                                setState(() => _rememberMe = true);
+                              }
+                            },
+                            child: Text(
+                              'I agree to the Terms and Conditions',
+                              style: GoogleFonts.chivo(
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
 
-                // Street/House No.
-                Text(
-                  'Street / Block / House No.',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _addressController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFE1EBEE),
-                    labelText: 'Purok 1, BLK 2, Lot 7',
-                    alignLabelWithHint: true,
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Password
-                Text(
-                  'Password',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obsecurePassword,
-                  // onChanged: _checkPassword,
-                  onChanged: (value) {
-                    setState(() {
-                      _passwordStarted = value.isNotEmpty;
-                      _hasMinLength = value.length >= 6;
-                      _hasUppercase = value.contains(RegExp(r'[A-Z]'));
-                      _hasNumber = value.contains(RegExp(r'[0-9]'));
-                      _hasSpecialChar = value.contains(
-                        RegExp(r'[!@#$%^&*(),.?":{}|<>_\-]'),
-                      );
-                      _passwordMatch = value == _confirmpasswordController.text;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: const Color(0xFFE1EBEE),
-                    labelText: 'Create a password',
-                    contentPadding: const EdgeInsets.fromLTRB(18, 22, 44, 2),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obsecurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.black,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obsecurePassword = !_obsecurePassword;
-                        });
-                      },
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                if (_passwordStarted)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Password must:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '- Be at least 6 characters',
-                        style: TextStyle(
-                          color: _hasMinLength ? Colors.green : Colors.red,
+                    // Sign Up Button
+                    const SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: _isloading ? null : signUp,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4A789E),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-
-                      Text(
-                        '- Include an uppercase letter',
-                        style: TextStyle(
-                          color: _hasUppercase ? Colors.green : Colors.red,
-                        ),
-                      ),
-
-                      Text(
-                        '- Include a number',
-                        style: TextStyle(
-                          color: _hasNumber ? Colors.green : Colors.red,
-                        ),
-                      ),
-
-                      Text(
-                        '- Include a special character (e.g., _ ! @ #)',
-                        style: TextStyle(
-                          color: _hasSpecialChar ? Colors.green : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 12),
-
-                // Confirm Password
-                Text(
-                  'Confirm Password',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _confirmpasswordController,
-                  obscureText: _obsecureConfirmPassword,
-                  // onChanged: _checkConfirmPassword,
-                  onChanged: (value) {
-                    setState(() {
-                      _confirmpasswordStarted = value.isNotEmpty;
-                      _passwordMatch = value == _passwordController.text;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    filled: true,
-                    fillColor: const Color(0xFFE1EBEE),
-                    labelText: 'Re-enter password',
-                    contentPadding: const EdgeInsets.fromLTRB(18, 22, 0, 2),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obsecureConfirmPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.black,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obsecureConfirmPassword = !_obsecureConfirmPassword;
-                        });
-                      },
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.black,
-                        width: 2.5,
-                      ),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                ),
-                if (_confirmpasswordStarted)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [_passwordRule("Password match", _passwordMatch)],
-                  ),
-                const SizedBox(height: 6),
-                // Terms & Conditions
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _rememberMe,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _rememberMe = value ?? false;
-                        });
-                      },
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () async {
-                          final accepted = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const CustTermsAndConditionsPage(),
+                        child: Center(
+                          child: Text(
+                            'Sign Up',
+                            style: GoogleFonts.chakraPetch(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
                             ),
-                          );
-                          if (accepted == true) {
-                            setState(() => _rememberMe = true);
-                          }
-                        },
-                        child: Text(
-                          'I agree to the Terms and Conditions',
-                          style: GoogleFonts.chivo(
-                            fontSize: 14,
-                            fontStyle: FontStyle.italic,
-                            decoration: TextDecoration.underline,
                           ),
                         ),
                       ),
                     ),
+
+                    // Redirect to Login
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                LoginPage(showRegisterPage: () {}),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF335E7A),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Have an Account? Sign In',
+                            style: GoogleFonts.chakraPetch(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_isloading)
+                      Container(
+                        color: Colors.black.withOpacity(0.5),
+                        child: const Center(
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 20),
                   ],
                 ),
-
-                // Sign Up Button
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: signUp,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4A789E),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Sign Up',
-                        style: GoogleFonts.chakraPetch(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Redirect to Login
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            LoginPage(showRegisterPage: () {}),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF335E7A),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Have an Account? Sign In',
-                        style: GoogleFonts.chakraPetch(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -68,9 +68,12 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     "Clothing Dyeing",
     "Custom Design and Alterations",
     "Fitting Assistance",
+    "Others",
   ];
   String _selectedService = '';
   final GlobalKey _serviceDropdownKey = GlobalKey();
+  bool _isOtherSelected = false;
+  TextEditingController _otherServiceController = TextEditingController();
 
   // Manual Measurement - Passing Data
   String? _measurementType;
@@ -591,6 +594,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                 ),
 
                 SizedBox(height: 10),
+
                 // Service/s availment
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -640,6 +644,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                           setState(() {
                             _selectedService = value;
                             _servicesController.text = value;
+                            _isOtherSelected = value == "Others";
                           });
                         },
                         radius: 15,
@@ -650,6 +655,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                             (index, item, {isItemSelected = false}) {
                               final String displayText = item ?? '';
                               return Container(
+                                alignment: Alignment.center,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 14,
@@ -659,6 +665,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                     : Colors.transparent,
                                 child: Text(
                                   displayText,
+                                  textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: fontSize,
                                     color: isItemSelected
@@ -672,9 +679,26 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                               );
                             },
                       ),
+                      if (_isOtherSelected)
+                      Padding(padding: const EdgeInsets.only(top:8.0),
+                      child: TextField(
+                        controller: _otherServiceController,
+                        textAlign: TextAlign.center,
+                        decoration: InputDecoration(
+                          labelText: 'Enter your service',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          )
+                        ),
+                        onChanged: (val) {
+                          _servicesController.text = val;
+                        },
+                      ),
+                      )
                     ],
                   ),
                 ),
+
                 SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),

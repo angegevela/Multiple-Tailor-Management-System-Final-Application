@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:email_validator/email_validator.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -11,11 +10,8 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final formKey = GlobalKey<FormState>();
-
   final TextEditingController _emailController = TextEditingController();
 
-  // Email Disposal
   @override
   void dispose() {
     _emailController.dispose();
@@ -25,7 +21,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFEEEEEE),
+      backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
         backgroundColor: const Color(0xFF6082B6),
         title: Text(
@@ -40,7 +36,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             Padding(
               padding: const EdgeInsets.all(3.0),
               child: Text(
-                'Please Enter Your Email to Reset the Password',
+                'Please enter your email to reset your password',
                 style: GoogleFonts.inter(
                   color: Colors.grey[700],
                   fontWeight: FontWeight.w500,
@@ -49,16 +45,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
             ),
 
-            // Email TextField
+            const SizedBox(height: 10),
+
+            // Email TextField (no validation)
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: TextFormField(
+              child: TextField(
                 controller: _emailController,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                validator: (email) =>
-                    email != null && !EmailValidator.validate(email)
-                    ? 'Enter a valid email'
-                    : null,
                 decoration: InputDecoration(
                   contentPadding: const EdgeInsets.fromLTRB(18, 22, 48, 20),
                   enabledBorder: OutlineInputBorder(
@@ -79,15 +72,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 10),
+
             MaterialButton(
               onPressed: () {
-                // Reset Logic Navigation
                 resetPassword();
               },
               color: Colors.blueGrey,
               textColor: Colors.white,
               elevation: 4,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -106,6 +101,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   Future<void> resetPassword() async {
+    // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -116,22 +112,33 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       final email = _emailController.text.trim();
 
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset email sent')),
+
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
+
+      // Show success dialog (better UX)
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Email Sent'),
+          content: const Text(
+            'Please check your email to reset your password.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // close dialog
+                Navigator.pop(context); // go back to login
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
       );
-
-      // Close all dialogs and go to the first route
-      Navigator.of(
-        context,
-        rootNavigator: true,
-      ).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
-      print('Password reset error: $e');
+      // Close loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
 
-      Navigator.of(
-        context,
-        rootNavigator: true,
-      ).pop(); //Dismissal of the dialog once it exit
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message ?? 'An error occurred')));

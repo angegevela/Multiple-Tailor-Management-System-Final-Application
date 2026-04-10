@@ -87,31 +87,29 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(backgroundColor: const Color(0xFFFCF8F8), elevation: 2),
       backgroundColor: const Color(0xFFEEEEEE),
-      body: Container(
-        color: const Color(0xFF31507F),
-        child: SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height,
+      body: Stack(
+        children: [
+          Container(color: const Color(0xFF31507F)),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 1.0,
+              child: Image.asset('assets/img/Group 63.png', fit: BoxFit.cover),
             ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 1.0,
-                    child: Image.asset(
-                      'assets/img/Group 63.png',
-                      fit: BoxFit.fitHeight,
-                    ),
+          ),
+
+          SafeArea(
+            child: SingleChildScrollView(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 30,
                   ),
-                ),
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 150, 20, 20),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
                     child: Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(maxWidth: 500),
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -318,10 +316,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

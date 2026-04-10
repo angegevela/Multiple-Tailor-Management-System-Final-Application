@@ -12,85 +12,91 @@ class User_Button extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(backgroundColor: const Color(0xFF6082B6), elevation: 2),
       backgroundColor: const Color(0xFFD9D9D9),
       body: SafeArea(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Text(
-                'Hello, User!',
-                style: GoogleFonts.jockeyOne(
-                  fontSize: 44,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                Text(
+                  'Hello, User!',
+                  style: GoogleFonts.jockeyOne(
+                    fontSize: 44,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                'Please choose a button that suits \n you',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.mPlusCodeLatin(
-                  fontSize: 16,
-                  color: Colors.black,
+
+                const SizedBox(height: 7),
+
+                Text(
+                  'Please choose a button that suits \n you',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.mPlusCodeLatin(
+                    fontSize: 16,
+                    color: Colors.black,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 7),
 
-              //Customer Button Navigation
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const SignupRegister(role: 'Customer'),
-                    ),
-                  );
-                },
-                child: userTile(
-                  imagePath: 'assets/img/customer.png',
-                  label: 'Customer',
+                const SizedBox(height: 15),
+
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const SignupRegister(role: 'Customer'),
+                      ),
+                    );
+                  },
+                  child: userTile(
+                    imagePath: 'assets/icons/customer.png',
+                    label: 'Customer',
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 7),
+                const SizedBox(height: 15),
 
-              //Tailor Button Navigation
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const TailorSignUpPage(role: 'Tailor'),
-                    ),
-                  );
-                },
-                child: userTile(
-                  imagePath: 'assets/img/tailor.png',
-                  label: 'Tailor/Tailor Shop',
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const TailorSignUpPage(role: 'Tailor'),
+                      ),
+                    );
+                  },
+                  child: userTile(
+                    imagePath: 'assets/icons/tailor.png',
+                    label: 'Tailor/Tailor Shop',
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 7),
+                const SizedBox(height: 15),
 
-              //Administrator Button Navigation
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdminLoginPage(),
-                    ),
-                  );
-                },
-                child: userTile(
-                  imagePath:
-                      'assets/img/admin 1.png',
-                  label: 'Admin',
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminLoginPage(),
+                      ),
+                    );
+                  },
+                  child: userTile(
+                    imagePath: 'assets/icons/systemadministration.png',
+                    label: 'Admin',
+                  ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -98,46 +104,29 @@ class User_Button extends StatelessWidget {
   }
 
   Widget userTile({required String imagePath, required String label}) {
-    return SizedBox(
+    return Container(
       width: 300,
       height: 190,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white70,
-              image: DecorationImage(
-                image: AssetImage(imagePath),
-                fit: BoxFit.scaleDown,
-              ),
-              border: Border.all(width: 0, color: Colors.transparent),
-              borderRadius: BorderRadius.circular(0),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black45,
-                  offset: Offset(5.0, 5.0),
-                  blurRadius: 10.0,
-                  spreadRadius: 2.0,
-                ),
-                BoxShadow(
-                  color: Colors.white,
-                  offset: Offset(0.0, 0.0),
-                  blurRadius: 0.0,
-                  spreadRadius: 0.0,
-                ),
-              ],
-            ),
+      decoration: BoxDecoration(
+        color: Colors.white70,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            offset: Offset(4.0, 4.0),
+            blurRadius: 10.0,
+            // spreadRadius: 2.0,
           ),
-          Positioned(
-            bottom: 10,
-            left: 0,
-            right: 0,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.labrada(color: Colors.black, fontSize: 16),
-            ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(imagePath, height: 110, fit: BoxFit.contain),
+          const SizedBox(height: 10),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.labrada(color: Colors.black, fontSize: 16),
           ),
         ],
       ),

@@ -51,7 +51,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
         child: Center(
           child: Column(
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               Text(
                 'Welcome to Threadhub',
                 style: TextStyle(
@@ -69,14 +69,14 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               Image.asset(
-                'assets/img/sew.png',
+                'assets/img/sewingmachine.jpg',
                 width: 347,
-                height: 336,
+                height: 347,
                 fit: BoxFit.cover,
               ),
-              const SizedBox(height: 50),
+              const SizedBox(height: 25),
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(top: 10),

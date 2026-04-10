@@ -112,7 +112,7 @@ flutter:
     - assets/img/Login.png
     - assets/img/admin 1.png
     - assets/img/Group 63.png
-    - assets/img/sew.png
+    - assets/img/sewingmachine.jpg
 
     - assets/img/flowerbackground.jpg
 
@@ -123,7 +123,9 @@ flutter:
     - assets/icons/pen-circle.png
     - assets/icons/help-circle.png
     - assets/icons/threadhub-applogo.png
-
+    - assets/icons/customer.png
+    - assets/icons/systemadministration.png
+    - assets/icons/tailor.png
     #GIF's
     - assets/gif/success.gif
     - assets/gif/manualmeasure.gif

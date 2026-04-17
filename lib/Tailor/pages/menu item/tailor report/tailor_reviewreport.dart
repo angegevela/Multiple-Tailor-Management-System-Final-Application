@@ -60,7 +60,7 @@ class TailorReviewReport extends StatelessWidget {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      await firestore.collection('notifications').add({
+      await firestore.collection('Notifications').add({
         'title': 'New Report Submitted',
         'body': '$reporteeName has submitted a report against $respondentName.',
         'reportId': reportRef.id,

@@ -568,15 +568,12 @@ Widget _buildInfoCard(
           const SizedBox(height: 5),
           Text(
             title,
-            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
+            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 10),
           Text(
-            percent,
-            style: TextStyle(
-              color: isNegative ? Colors.red : Colors.green,
-              fontWeight: FontWeight.w600,
-            ),
+            "Based on selected period",
+            style: TextStyle(fontSize: 11, color: Colors.blueGrey),
           ),
         ],
       ),

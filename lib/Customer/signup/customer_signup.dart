@@ -12,12 +12,16 @@ import 'package:geocoding/geocoding.dart';
 
 class SignupRegister extends StatefulWidget {
   final String role;
+  final String? email;
+  final String? name;
   final bool acceptedTerms;
 
   const SignupRegister({
     super.key,
     required this.role,
     this.acceptedTerms = false,
+    this.email,
+    this.name,
   });
 
   @override
@@ -30,6 +34,15 @@ class _SignupRegisterState extends State<SignupRegister> {
   @override
   void initState() {
     super.initState();
+    
+    if (widget.email != null) {
+      _emailController.text = widget.email!;
+    }
+
+    if (widget.name != null) {
+      _firstnameController.text = widget.name!;
+    }
+
     _isChecked = widget.acceptedTerms;
   }
 
@@ -557,6 +570,62 @@ class _SignupRegisterState extends State<SignupRegister> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+
+                    // Phone Number
+                    Text(
+                      'Phone Number',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextField(
+                      controller: _phonenumberController,
+                      keyboardType: TextInputType.phone,
+                      onChanged: (value) {
+                        String cleaned = value.replaceAll(RegExp(r'[^d]'), '');
+                        if (cleaned.length > 2 && cleaned.startsWith('09')) {
+                          String formatted = '+63' + cleaned.substring(1);
+                          if (_phonenumberController.text != formatted) {
+                            _phonenumberController.value = TextEditingValue(
+                              text: formatted,
+                              selection: TextSelection.collapsed(
+                                offset: formatted.length,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: const Color(0xFFE1EBEE),
+                        labelText: 'Enter your phone number',
+                        hintText: 'Type 09... or +63...',
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          18,
+                          22,
+                          48,
+                          2,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.black,
+                            width: 2.5,
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 12),
 
                     // Email

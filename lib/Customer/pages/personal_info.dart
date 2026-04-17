@@ -56,7 +56,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
           _usernameController.text = data['username'] ?? '';
           _phoneController.text = data['phoneNumber']?.toString() ?? '';
           _emailController.text = data['email'] ?? user.email ?? '';
-          _addressController.text = data['address'] ?? '';
+          _addressController.text = data['fullAddress'] ?? '';
           _profileImageUrl = data['profileImageUrl'] ?? '';
         });
       }
@@ -103,14 +103,14 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
 
       setState(() => _profileImageUrl = cacheBustedUrl);
 
-      debugPrint('✅ Uploaded to path: $path');
-      debugPrint('🌐 Public URL: $cacheBustedUrl');
+      debugPrint('Uploaded to path: $path');
+      debugPrint('Public URL: $cacheBustedUrl');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile picture updated successfully!")),
       );
     } catch (e) {
-      debugPrint('❌ Upload error: $e');
+      debugPrint('Upload error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Upload failed. Please try again.")),
       );

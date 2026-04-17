@@ -397,59 +397,76 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
                   const SizedBox(height: 20),
 
+                  // ElevatedButton(
+                  //   onPressed: _isLoading
+                  //       ? null
+                  //       : () async {
+                  //           setState(() => _isLoading = true);
+                  //           try {
+                  //             final pos = await _determinePosition(context);
+                  //             if (pos == null) {
+                  //               setState(() => _isLoading = false);
+                  //               return;
+                  //             }
+
+                  //             GeoPoint customerLocation = GeoPoint(
+                  //               pos.latitude,
+                  //               pos.longitude,
+                  //             );
+
+                  //             final matcher = TailorMatcher();
+                  //             final tailors = await matcher
+                  //                 .findTailorsForAppointment(
+                  //                   service: widget.data.services,
+                  //                   customerLocation: customerLocation,
+                  //                   radiusKm: 5.0,
+                  //                   appointmentDate:
+                  //                       widget.data.appointmentDateTime,
+                  //                 );
+
+                  //             if (tailors.isNotEmpty) {
+                  //               // Navigate to tailor selection
+                  //               final result = await Navigator.push(
+                  //                 context,
+                  //                 MaterialPageRoute(
+                  //                   builder: (context) => TailorResultsPage(
+                  //                     tailors: tailors,
+                  //                     data: widget.data,
+                  //                     customerId: '',
+                  //                     customerLocation: customerLocation,
+                  //                   ),
+                  //                 ),
+                  //               );
+
+                  //               if (result == true) {
+                  //                 // Tailor selected - show success
+                  //                 ScaffoldMessenger.of(context).showSnackBar(
+                  //                   const SnackBar(
+                  //                     content: Text(
+                  //                       "Tailor assigned successfully! Check your appointments.",
+                  //                     ),
+                  //                     backgroundColor: Colors.green,
+                  //                   ),
+                  //                 );
+                  //                 Navigator.pop(
+                  //                   context,
+                  //                 ); // Go back to previous screen
+                  //               }
+                  //             } else {
+                  //               _showNoTailorDialog(); // Custom dialog instead of snackbar
+                  //             }
+                  //           } catch (e) {
+                  //             ScaffoldMessenger.of(context).showSnackBar(
+                  //               SnackBar(
+                  //                 content: Text("Failed to find tailors: $e"),
+                  //               ),
+                  //             );
+                  //           } finally {
+                  //             setState(() => _isLoading = false);
+                  //           }
+                  //         },
                   ElevatedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            setState(() => _isLoading = true);
-                            try {
-                              final pos = await _determinePosition(context);
-                              if (pos == null) return;
-
-                              GeoPoint customerLocation = GeoPoint(
-                                pos.latitude,
-                                pos.longitude,
-                              );
-
-                              final matcher = TailorMatcher();
-                              final tailors = await matcher
-                                  .findTailorsForAppointment(
-                                    service: widget.data.services,
-                                    customerLocation: customerLocation,
-                                    radiusKm: 5.0,
-                                    appointmentDate:
-                                        widget.data.appointmentDateTime,
-                                  );
-
-                              if (tailors.isNotEmpty) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => TailorResultsPage(
-                                      tailors: tailors,
-                                      data: widget.data,
-                                      customerId: '',
-                                      customerLocation: customerLocation,
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("No tailors found nearby."),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Failed to find tailors: $e"),
-                                ),
-                              );
-                            } finally {
-                              setState(() => _isLoading = false);
-                            }
-                          },
+                    onPressed: _isLoading ? null : _findtailorbutton,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6082B6),
                       shape: RoundedRectangleBorder(
@@ -460,7 +477,6 @@ class _ReceiptPageState extends State<ReceiptPage> {
                     ),
                     child: Text(
                       "Find Tailor",
-                      textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
@@ -485,100 +501,383 @@ class _ReceiptPageState extends State<ReceiptPage> {
       ),
     );
   }
-}
 
-TableRow buildTableRow(
-  BuildContext context, {
-  required String label,
-  required String value,
-  Color leftColor = const Color(0xFFE8F9FF),
-  Color rightColor = Colors.white,
-}) {
-  final fontSize = context.watch<FontProvider>().fontSize;
-  Color textColor = Colors.black;
+  Future<bool?> _showNoTailorDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 8,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person_search_outlined,
+                  size: 48,
+                  color: Colors.orange[600],
+                ),
+              ),
+              const SizedBox(height: 16),
 
-  if (label == "Prioritization") {
-    if (value.toLowerCase().contains("low")) {
-      textColor = Colors.green;
-    } else if (value.toLowerCase().contains("medium")) {
-      textColor = Colors.yellow[800]!;
-    } else if (value.toLowerCase().contains("high")) {
-      textColor = const Color(0xFF900707);
+              // Title
+              Text(
+                "No Tailors Available",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+
+              // Content
+              Text(
+                "No tailors found for your selected date/time and location.",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.black54,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+
+              // Options list
+              Text(
+                "Options:",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    _buildOptionRow(
+                      Icons.calendar_today_outlined,
+                      "Change appointment date/time",
+                    ),
+                    const SizedBox(height: 8),
+                    _buildOptionRow(
+                      Icons.support_agent_outlined,
+                      "Contact support for further assistance",
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Redesigned 2 buttons only
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildSecondaryButton(
+                      context,
+                      label: "Okay",
+                      onTap: () => Navigator.pop(context, false),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildPrimaryButton(
+                      context,
+                      label: "Cancel Appointment",
+                      onTap: () => Navigator.pop(context, true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSecondaryButton(
+    BuildContext context, {
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.daiBannaSil(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrimaryButton(
+    BuildContext context, {
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF9ED3DC),
+            const Color(0xFF9ED3DC).withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blueGrey.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.daiBannaSil(
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _deletionDraftAppointment() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('Appointments Forms')
+          .doc(widget.data.appointmentId)
+          .delete();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Draft appointment are cancelled. ")),
+        );
+      }
+    } catch (e) {}
+  }
+
+  Future<void> _findtailorbutton() async {
+    setState(() => _isLoading = true);
+    try {
+      final pos = await _determinePosition(context);
+      if (pos == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final customerLocation = GeoPoint(pos.latitude, pos.longitude);
+
+      final matcher = TailorMatcher();
+      final tailors = await matcher.findTailorsForAppointment(
+        service: widget.data.services,
+        customerLocation: customerLocation,
+        radiusKm: 5.0,
+        appointmentDate: widget.data.appointmentDateTime,
+      );
+
+      if (tailors.isNotEmpty) {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TailorResultsPage(
+              tailors: tailors,
+              data: widget.data,
+              customerId: widget.data.customerId ?? '',
+              customerLocation: customerLocation,
+            ),
+          ),
+        );
+
+        if (result == true && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Tailor assigned successfully!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        final shouldCancel = await _showNoTailorDialog();
+        if (shouldCancel == true) {
+          await _deletionDraftAppointment();
+
+          if (mounted) {
+            Navigator.pop(context);
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  return TableRow(
-    children: [
-      TableCell(
-        verticalAlignment: TableCellVerticalAlignment.fill,
-        child: Container(
-          color: leftColor,
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontFamily: 'HermeneusOne',
-              fontSize: fontSize,
+  TableRow buildTableRow(
+    BuildContext context, {
+    required String label,
+    required String value,
+    Color leftColor = const Color(0xFFE8F9FF),
+    Color rightColor = Colors.white,
+  }) {
+    final fontSize = context.watch<FontProvider>().fontSize;
+    Color textColor = Colors.black;
+
+    if (label == "Prioritization") {
+      if (value.toLowerCase().contains("low")) {
+        textColor = Colors.green;
+      } else if (value.toLowerCase().contains("medium")) {
+        textColor = Colors.yellow[800]!;
+      } else if (value.toLowerCase().contains("high")) {
+        textColor = const Color(0xFF900707);
+      }
+    }
+
+    return TableRow(
+      children: [
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.fill,
+          child: Container(
+            color: leftColor,
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'HermeneusOne',
+                fontSize: fontSize,
+              ),
             ),
           ),
         ),
-      ),
-      TableCell(
-        verticalAlignment: TableCellVerticalAlignment.middle,
-        child: Container(
-          color: rightColor,
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.normal,
-              fontFamily: 'HermeneusOne',
-              fontSize: fontSize,
-              color: textColor,
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Container(
+            color: rightColor,
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.normal,
+                fontFamily: 'HermeneusOne',
+                fontSize: fontSize,
+                color: textColor,
+              ),
             ),
           ),
         ),
-      ),
-    ],
-  );
-}
-
-Future<Position?> _determinePosition(BuildContext context) async {
-  bool serviceEnabled;
-  LocationPermission permission;
-
-  serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Location services are disabled.")),
+      ],
     );
-    return null;
   }
 
-  permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied) {
+  Future<Position?> _determinePosition(BuildContext context) async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Location permissions are denied.")),
+        const SnackBar(content: Text("Location services are disabled.")),
       );
       return null;
     }
-  }
 
-  if (permission == LocationPermission.deniedForever) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          "Location permissions are permanently denied. Please enable them in Settings.",
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Location permissions are denied.")),
+        );
+        return null;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Location permissions are permanently denied. Please enable them in Settings.",
+          ),
         ),
-      ),
-    );
-    return null;
-  }
+      );
+      return null;
+    }
 
-  return await Geolocator.getCurrentPosition(
-    desiredAccuracy: LocationAccuracy.high,
-  );
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+  }
 }

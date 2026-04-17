@@ -90,7 +90,7 @@ class NotificationService {
     String? appointmentDate,
     String? neededBy,
   }) async {
-    await FirebaseFirestore.instance.collection('notifications').add({
+    await FirebaseFirestore.instance.collection('Notifications').add({
       'title': title,
       'body': body,
       'recipientIds': recipientIds,
@@ -131,12 +131,12 @@ class NotificationService {
 
 Stream<List<AppNotification>> getNotifications(String customerId) {
   final stream1 = FirebaseFirestore.instance
-      .collection('notifications')
+      .collection('Notifications')
       .where('recipientIds', arrayContains: customerId)
       .snapshots();
 
   final stream2 = FirebaseFirestore.instance
-      .collection('notifications')
+      .collection('Notifications')
       .where('toCustomerId', isEqualTo: customerId)
       .snapshots();
 
@@ -171,7 +171,7 @@ Stream<List<AppNotification>> getNotifications(String customerId) {
 
 Future<void> markAsRead(String notificationId, String userId) async {
   await FirebaseFirestore.instance
-      .collection('notifications')
+      .collection('Notifications')
       .doc(notificationId)
       .update({
         'readBy': FieldValue.arrayUnion([userId]),

@@ -58,7 +58,16 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
 
       setState(() {
         customers = data;
+        isLoading = false;
       });
+
+      if (customers.isEmpty) {
+        Future.microtask(() {
+          if (context.mounted) {
+            Navigator.of((context)).pop();
+          }
+        });
+      }
     } catch (e) {
       debugPrint('Error loading customers: $e');
     } finally {
@@ -153,7 +162,7 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
             });
         // send notification to customer
         if (customerId != null) {
-          await FirebaseFirestore.instance.collection('notifications').add({
+          await FirebaseFirestore.instance.collection('Notifications').add({
             'appointmentId': apptId,
             'title': 'Appointment Declined',
             'body':
@@ -165,7 +174,7 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
           });
         }
         // optional: tailor notification log (keeps track)
-        await FirebaseFirestore.instance.collection('notifications').add({
+        await FirebaseFirestore.instance.collection('Notifications').add({
           'appointmentId': apptId,
           'title': 'You declined an appointment',
           'body':
@@ -191,10 +200,59 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
     }
   }
 
+  bool get _allSelectedHaveRequiredData {
+    for (final apptId in selectedAppointmentIds) {
+      final cust = customers.firstWhere(
+        (e) => e['appointmentId'] == apptId,
+        orElse: () => {},
+      );
+
+      if (cust.isEmpty) return false;
+
+      final customerId = cust['customerId'];
+      final tempData = widgetTempData[customerId];
+
+      if (tempData == null ||
+          tempData['price'] == null ||
+          tempData['price'].toString().isEmpty ||
+          tempData['price'] == 0 ||
+          tempData['assignedTailor'] == null ||
+          tempData['assignedTailor'].toString().trim().isEmpty) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   Future<void> _batchAccept() async {
     if (!_hasSelection) return;
+
     final tailorId = FirebaseAuth.instance.currentUser?.uid;
     if (tailorId == null) return;
+
+    for (final apptId in selectedAppointmentIds) {
+      final cust = customers.firstWhere(
+        (c) => c['appointmentId'] == apptId,
+        orElse: () => {},
+      );
+
+      if (cust.isEmpty) continue;
+
+      final customerId = cust['customerId'];
+      final tempData = widgetTempData[customerId];
+
+      if (tempData == null ||
+          tempData['price'] == null ||
+          tempData['price'].toString().isEmpty ||
+          tempData['price'] == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please input for all selected customers'),
+          ),
+        );
+        return;
+      }
+    }
 
     final List<String> toProcess = selectedAppointmentIds.toList();
     for (final apptId in toProcess) {
@@ -218,7 +276,9 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
               'updatedAt': FieldValue.serverTimestamp(),
             });
 
-        if (tempData['assignedTailor'] != null) {
+        if (tempData['assignedTailor'] != null &&
+        tempData['assignedTailor'].toString().trim().isNotEmpty
+        ) {
           await FirebaseFirestore.instance
               .collection('Appointment Forms')
               .doc(apptId)
@@ -226,7 +286,7 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
         }
 
         if (customerId != null) {
-          await FirebaseFirestore.instance.collection('notifications').add({
+          await FirebaseFirestore.instance.collection('Notifications').add({
             'appointmentId': apptId,
             'title': 'Tailor responded to your request',
             'body':
@@ -238,7 +298,7 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
           });
         }
 
-        await FirebaseFirestore.instance.collection('notifications').add({
+        await FirebaseFirestore.instance.collection('Notifications').add({
           'appointmentId': apptId,
           'title': 'Waiting for Customer Response',
           'body':
@@ -254,13 +314,19 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
     }
 
     // refresh list and clear selection
+    selectedAppointmentIds.clear();
     await _loadPendingTailorCustomers();
+
     selectedAppointmentIds.clear();
     setState(() {});
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selected appointments accepted.')),
-      );
+      if (customers.isEmpty) {
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Operation completed')));
+      }
     }
   }
 
@@ -394,7 +460,10 @@ class _TailorPickCustomerState extends State<TailorPickCustomer> {
             SizedBox(
               width: 120,
               child: ElevatedButton(
-                onPressed: (_hasSelection && _allSelectedArePending)
+                onPressed:
+                    (_hasSelection &&
+                        _allSelectedArePending &&
+                        _allSelectedHaveRequiredData)
                     ? _batchAccept
                     : null,
                 style: ElevatedButton.styleFrom(

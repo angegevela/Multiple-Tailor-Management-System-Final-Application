@@ -126,6 +126,7 @@ flutter:
     - assets/icons/customer.png
     - assets/icons/systemadministration.png
     - assets/icons/tailor.png
+    - assets/icons/clear.png
     #GIF's
     - assets/gif/success.gif
     - assets/gif/manualmeasure.gif

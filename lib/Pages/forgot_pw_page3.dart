@@ -32,17 +32,29 @@ class _ForgotPasswordStateverify extends State<ForgotPasswordverify> {
     uid = user?.uid ?? "";
   }
 
- 
   Future<bool> _phoneExists(String phone) async {
+    String mobileNumber = phone.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (mobileNumber.startsWith('63') && mobileNumber.length > 11) {
+      mobileNumber = mobileNumber.substring(2);
+    } else if (mobileNumber.startsWith('9') && mobileNumber.length == 10) {
+      mobileNumber = mobileNumber.substring(1);
+    }
+
     final users = FirebaseFirestore.instance.collection('Users');
 
-    var q1 = await users.where('phoneNumber', isEqualTo: phone).limit(1).get();
+    var q1 = await users
+        .where('phoneNumber', isEqualTo: mobileNumber)
+        .limit(1)
+        .get();
+    print("📱 phoneNumber '$mobileNumber': ${q1.docs.length} results");
     if (q1.docs.isNotEmpty) return true;
 
     var q2 = await users
-        .where('businessNumber', isEqualTo: phone)
+        .where('businessNumber', isEqualTo: mobileNumber)
         .limit(1)
         .get();
+    print("🏢 businessNumber '$mobileNumber': ${q2.docs.length} results");
     if (q2.docs.isNotEmpty) return true;
 
     return false;
@@ -50,8 +62,9 @@ class _ForgotPasswordStateverify extends State<ForgotPasswordverify> {
 
   void _sendOTP() async {
     String phone = _phoneController.text.trim();
+    print("🎯 App validation phone: '$phone'");
 
-    if (!phone.startsWith('+')) {
+    if (phone.replaceAll(RegExp(r'[^\d]'), '').length < 10) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -74,36 +87,31 @@ class _ForgotPasswordStateverify extends State<ForgotPasswordverify> {
     await _auth.verifyPhoneNumber(
       phoneNumber: phone,
       timeout: const Duration(seconds: 60),
-
-      verificationCompleted: (_) {},
-
+      verificationCompleted: (_) {
+        print("🔄 Auto verification (iOS/Android auto-fill)");
+      },
       verificationFailed: (FirebaseAuthException e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Verification failed: ${e.message}")),
         );
       },
-
       codeSent: (String verificationId, int? resendToken) {
         if (!mounted) return;
-
         setState(() {
           _verificationId = verificationId;
           _otpSent = true;
         });
-
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("OTP Sent Successfully")));
       },
-
       codeAutoRetrievalTimeout: (String verificationId) {
         _verificationId = verificationId;
       },
     );
   }
 
- 
   void _verifyOTP() async {
     try {
       PhoneAuthCredential credential = PhoneAuthProvider.credential(
@@ -181,9 +189,24 @@ class _ForgotPasswordStateverify extends State<ForgotPasswordverify> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  onChanged: (value) {
+                    String cleaned = value.replaceAll(RegExp(r'[^\d]'), '');
+
+                    if (cleaned.length >= 2 && cleaned.startsWith('09')) {
+                      String formatted = '+63' + cleaned.substring(1);
+                      if (_phoneController.text != formatted) {
+                        _phoneController.value = TextEditingValue(
+                          text: formatted,
+                          selection: TextSelection.collapsed(
+                            offset: formatted.length,
+                          ),
+                        );
+                      }
+                    }
+                  },
                   decoration: InputDecoration(
                     labelText: "Phone Number",
-                    hintText: "+639XXXXXXXXX",
+                    hintText: "09XXXXXXXXX or +639XXXXXXXXX",
                     filled: true,
                     fillColor: Colors.grey[200],
                     border: OutlineInputBorder(

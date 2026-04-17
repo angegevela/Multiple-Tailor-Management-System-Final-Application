@@ -181,7 +181,7 @@ class _AdminAppointmentPageState extends State<AdminAppointmentPage> {
         actions: [
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection('notifications')
+                .collection('Notifications')
                 .where('toAdmin', isEqualTo: true)
                 .snapshots(),
             builder: (context, snapshot) {

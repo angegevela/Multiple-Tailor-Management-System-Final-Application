@@ -93,7 +93,7 @@ class _TailorPortfolioDetailPageState extends State<TailorPortfolioDetailPage> {
           .createSignedUrl('Portfolio/$cleanPath', 3600);
       return signedUrl;
     } catch (e) {
-      print('❌ Error creating signed URL for $cleanPath: $e');
+      print('Error creating signed URL for $cleanPath: $e');
       return '';
     }
   }

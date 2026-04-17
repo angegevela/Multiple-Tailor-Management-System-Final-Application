@@ -280,30 +280,35 @@ class _TailorHelpPageState extends State<TailorHelpPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _buildContactCard(
-                      icon: Icons.headset_mic,
-                      text: "Customer Services Assistance",
-                      // onTap: () {
-                      //   Navigator.push(
-                      //     // context,
-                      //     // MaterialPageRoute(
-                      //     //   builder: (_) => ChatPage(
-                      //     //     chatId:
-                      //     //         "${tailorId}_${customerId}",
-                      //     //     currentUserId: tailorId,
-                      //     //     otherUserId: customerId,
-                      //     //   ),
-                      //     // ),
-                      //   );
-                      // },
-                    ),
+                    // _buildContactCard(
+                    //   icon: Icons.headset_mic,
+                    //   text: "Customer Services Assistance",
+                    //   // onTap: () {
+                    //   //   Navigator.push(
+                    //   //     // context,
+                    //   //     // MaterialPageRoute(
+                    //   //     //   builder: (_) => ChatPage(
+                    //   //     //     chatId:
+                    //   //     //         "${tailorId}_${customerId}",
+                    //   //     //     currentUserId: tailorId,
+                    //   //     //     otherUserId: customerId,
+                    //   //     //   ),
+                    //   //     // ),
+                    //   //   );
+                    //   // },
+                    // ),
                     _buildContactCard(
                       icon: Icons.email,
-                      text: "developersname@gmail.com",
+                      text: "threadhubapp@gmail.com",
+                      subtitle: "Contact us via email first before visiting",
                     ),
+
                     _buildContactCard(
-                      icon: Icons.facebook,
-                      text: "www.facebook.com/threadhub",
+                      icon: Icons.location_on,
+                      text:
+                          "Main, Tiniguiban Heights Palawan State University Puerto Princesa City Palawan 5300",
+
+                      subtitle: "Visit us today!",
                     ),
                   ],
                 ),
@@ -318,6 +323,7 @@ class _TailorHelpPageState extends State<TailorHelpPage> {
   Widget _buildContactCard({
     required IconData icon,
     required String text,
+    String? subtitle,
     VoidCallback? onTap,
   }) {
     return Padding(
@@ -343,12 +349,26 @@ class _TailorHelpPageState extends State<TailorHelpPage> {
               Icon(icon, size: 28, color: Colors.black),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  text,
-                  style: GoogleFonts.prompt(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                child: RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.prompt(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                    children: [
+                      TextSpan(text: text),
+                      if (subtitle != null) ...[
+                        TextSpan(
+                          text: '\n$subtitle',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),

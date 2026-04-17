@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:threadhub_system/Customer/signup/customer_homepage.dart';
 import 'package:threadhub_system/Customer/signup/welcoming_signup.dart';
+import 'package:threadhub_system/Pages/approval_screen(signup).dart';
 import 'package:threadhub_system/Pages/forgot_pw_page1.dart';
+import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_availabilitysettings.dart';
 import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
 
 class LoginPage extends StatefulWidget {
@@ -22,191 +24,211 @@ class _LoginPageState extends State<LoginPage> {
 
   //Remember Me
   bool _rememberMe = false;
+void signUserIn() async {
+  String identifier = emailController.text.trim();
+  String password = passwordController.text.trim();
 
-  //Sign-in User
-  void signUserIn() async {
-    //Show loading circle
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
+  // Prevent empty input BEFORE Firebase
+  if (identifier.isEmpty || password.isEmpty) {
+    NoInput();
+    return;
+  }
 
-    try {
-      String identifier = emailController.text.trim();
-      String password = passwordController.text.trim();
-      String email = identifier;
+  // Show loading circle
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
 
-      //Check if user typed username instead of email
-      if (!identifier.contains('@')) {
-        final snapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .where('username', isEqualTo: identifier)
-            .limit(1)
-            .get();
+  try {
+    String email = identifier;
 
-        if (snapshot.docs.isEmpty) {
-          Navigator.pop(context);
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: Colors.blueGrey[100],
-              title: Text(
-                "Login Error",
-                style: GoogleFonts.playfairDisplay(fontSize: 23),
-                textAlign: TextAlign.center,
-              ),
-              content: Text(
-                "No account found with that username.",
-                style: GoogleFonts.songMyung(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    "Okay",
-                    style: GoogleFonts.songMyung(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-          return;
-        }
-
-        // Extract email from Firestore
-        email = snapshot.docs.first['email'];
-
-        // If email is blank (optional), reconstruct fallback email
-        if (email.isEmpty) {
-          email = '${identifier.toLowerCase()}@example.com';
-        }
-      }
-
-      // attempt login with resolved email
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
-
-      String uid = userCredential.user!.uid;
-
-      //Fetch user document
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+    // Checking if user typed username instead of email
+    if (!identifier.contains('@')) {
+      final snapshot = await FirebaseFirestore.instance
           .collection('Users')
-          .doc(uid)
+          .where('username', isEqualTo: identifier)
+          .limit(1)
           .get();
 
-      if (!userDoc.exists) {
+      if (snapshot.docs.isEmpty) {
         Navigator.pop(context);
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: Colors.blueGrey[100],
-            title: Text(
-              'Login Error',
-              style: GoogleFonts.playfairDisplay(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            content: Text(
-              'User record not found in the database.',
-              style: GoogleFonts.songMyung(fontSize: 16),
-            ),
-            actions: [
-              TextButton(
-                child: Text(
-                  'Confirm',
-                  style: GoogleFonts.songMyung(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        );
+        wrongEmailMessage();
         return;
       }
 
-      //Read role
-      String role = userDoc['role'];
+      email = snapshot.docs.first['email'];
+    }
 
+    // Attempt login with resolved email if the username is not possible
+    UserCredential userCredential = await FirebaseAuth.instance
+        .signInWithEmailAndPassword(email: email, password: password);
+
+    String uid = userCredential.user!.uid;
+
+    // Fetching from  user document in firebase
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(uid)
+        .get();
+
+    if (!userDoc.exists) {
       Navigator.pop(context);
+      wrongEmailMessage();
+      return;
+    }
 
-      if (role == 'Customer') {
+    final data = userDoc.data() as Map<String, dynamic>;
+
+    // Reading the role
+    String role = data['role'] ?? '';
+
+    Navigator.pop(context);
+
+    // New Customer Flow
+    if (role == 'Customer') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => CustomerHomePage()),
+      );
+    }
+
+    // New Tailor Flow
+    else if (role == 'Tailor') {
+      bool isApproved = data['isApproved'] ?? false;
+
+      Map availability = data['availability'] ?? {};
+      List days = availability['days'] ?? [];
+
+      bool hasAvailabilityFlag = data['hasAvailability'] ?? false;
+      bool hasAvailability = hasAvailabilityFlag && days.isNotEmpty;
+
+      // This navigation will navigate to the approcal pending screen if the user is not yet approved by administrator
+      if (!isApproved) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => CustomerHomePage()),
+          MaterialPageRoute(builder: (context) => ApprovalPendingScreen()),
         );
-      } else if (role == 'Tailor') {
+      }
+
+      // Elif condition if the approved tailor are directed to the availability setting to avoid confusion
+      else if (!hasAvailability) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TailorAvailabilitySettings(),
+          ),
+        );
+      }
+
+      // This will ready the application and direct to the tailorhomepage if availibility are set up
+      else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => TailorHomePage(showAccepted: true),
           ),
         );
-      } else {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(
-              "Role Error",
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: Text(
-              "User role is not recognized.",
-              style: GoogleFonts.songMyung(fontSize: 16),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text("Okay"),
-              ),
-            ],
-          ),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      Navigator.pop(context);
-      if (e.code == 'user-not-found') {
-        wrongEmailMessage();
-      } else if (e.code == 'wrong-password') {
-        wrongPasswordMessage();
-      } else {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(
-              'Login Failed',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
-            ),
-            content: Text(
-              e.message ?? 'An error occurred.',
-              style: GoogleFonts.songMyung(fontSize: 16),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text("Okay", style: GoogleFonts.songMyung(fontSize: 16)),
-              ),
-            ],
-          ),
-        );
       }
     }
+
+    // the system will notify the user if their is an error within their role or if they're arent sign up yet
+    else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.blueGrey[100],
+          title: Text(
+            "Role Error",
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            "User role is not recognized.",
+            style: GoogleFonts.songMyung(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                "Okay",
+                style: GoogleFonts.songMyung(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  } on FirebaseAuthException catch (e) {
+    Navigator.pop(context);
+
+    if (e.code == 'user-not-found') {
+      wrongEmailMessage();
+    } else if (e.code == 'wrong-password') {
+      wrongPasswordMessage();
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.blueGrey[100],
+          title: Text(
+            'Login Failed',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.playfairDisplay(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            e.message ?? 'An error occurred.',
+            style: GoogleFonts.songMyung(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                "Okay",
+                style: GoogleFonts.songMyung(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+}
+
+  void NoInput() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.blueGrey[100],
+          title: Text(
+            'You havent input anything yet',
+            style: GoogleFonts.playfairDisplay(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Confirm',
+                style: GoogleFonts.songMyung(fontSize: 16),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void wrongEmailMessage() {

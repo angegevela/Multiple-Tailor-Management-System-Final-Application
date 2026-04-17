@@ -273,20 +273,38 @@ class _AdminUserApprovalFrameState extends State<AdminUserApprovalFrame> {
         onTap: () {
           showDialog(
             context: navigatorKey.currentContext!,
+            barrierDismissible: true, // allows tap outside to close
             builder: (_) => Dialog(
               insetPadding: EdgeInsets.zero,
               backgroundColor: Colors.transparent,
-              child: Container(
-                color: Colors.black.withOpacity(0.8),
-                child: PhotoView(
-                  imageProvider: NetworkImage(imageUrl),
-                  backgroundDecoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.8),
+              child: Stack(
+                children: [
+                  Container(
+                    color: Colors.black.withOpacity(0.9),
+                    child: PhotoView(
+                      imageProvider: NetworkImage(imageUrl),
+                      backgroundDecoration: const BoxDecoration(
+                        color: Colors.transparent,
+                      ),
+                      minScale: PhotoViewComputedScale.contained,
+                      maxScale: PhotoViewComputedScale.covered * 2,
+                      initialScale: PhotoViewComputedScale.contained,
+                    ),
                   ),
-                  minScale: PhotoViewComputedScale.contained,
-                  maxScale: PhotoViewComputedScale.covered * 2,
-                  initialScale: PhotoViewComputedScale.contained,
-                ),
+
+                  Positioned(
+                    top: 40,
+                    right: 20,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ],
               ),
             ),
           );

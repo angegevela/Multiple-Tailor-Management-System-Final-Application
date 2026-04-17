@@ -52,7 +52,7 @@ Future<void> createNotificationForTailor({
   if (title.contains("Review") && !reviewEnabled) return;
 
   final notifRef = await FirebaseFirestore.instance
-      .collection('notificaions')
+      .collection('Notifications')
       .add({
         'title': title,
         'body': body,
@@ -119,36 +119,41 @@ class AppNotification {
 }
 
 Stream<List<AppNotification>> getNotifications(String tailorId) {
-  final newNotifStream = FirebaseFirestore.instance
-      .collection('notifications')
-      .where('recipientType', isEqualTo: 'tailor')
+  final stream1 = FirebaseFirestore.instance
+      .collection('Notifications')
       .where('recipientId', isEqualTo: tailorId)
       .snapshots();
 
-  final oldNotifStream = FirebaseFirestore.instance
-      .collection('notifications')
+  final stream2 = FirebaseFirestore.instance
+      .collection('Notifications')
       .where('toTailorId', isEqualTo: tailorId)
       .snapshots();
 
-  return Rx.combineLatest2(newNotifStream, oldNotifStream, (
-    QuerySnapshot newSnap,
-    QuerySnapshot oldSnap,
+  final stream3 = FirebaseFirestore.instance
+      .collection('Notifications')
+      .where('to', isEqualTo: tailorId)
+      .snapshots();
+
+  return Rx.combineLatest3(stream1, stream2, stream3, (
+    QuerySnapshot a,
+    QuerySnapshot b,
+    QuerySnapshot c,
   ) {
-    final allDocs = [...newSnap.docs, ...oldSnap.docs];
-    allDocs.sort((a, b) {
-      final aTime =
-          (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
-      final bTime =
-          (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
-      return bTime!.compareTo(aTime!);
+    final allDocs = [...a.docs, ...b.docs, ...c.docs];
+
+    allDocs.sort((x, y) {
+      final xt = (x.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+      final yt = (y.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+      return yt!.compareTo(xt!);
     });
+
     return allDocs.map((doc) => AppNotification.fromDoc(doc)).toList();
   });
 }
 
 Future<void> markAsRead(String notifId, String userId) async {
   await FirebaseFirestore.instance
-      .collection('notifications')
+      .collection('Notifications')
       .doc(notifId)
       .update({
         'readBy': FieldValue.arrayUnion([userId]),
@@ -171,7 +176,7 @@ class TailorNotificationPageState extends State<TailorNotificationPage> {
     for (var n in notifs) {
       if (!n.isReadByCurrentUser) {
         batch.update(
-          FirebaseFirestore.instance.collection('notifications').doc(n.id),
+          FirebaseFirestore.instance.collection('Notifications').doc(n.id),
           {
             'readBy': FieldValue.arrayUnion([userId]),
           },

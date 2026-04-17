@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:threadhub_system/Admin/login/admin_login.dart';
@@ -7,7 +8,9 @@ import 'package:threadhub_system/Tailor/signup/tailor_shops%20-%20signup.dart';
 // role button for three users(customer, tailor, administrator)
 class User_Button extends StatelessWidget {
   final String role;
-  const User_Button({super.key, required this.role});
+  final User? googleUser;
+
+  const User_Button({super.key, required this.role, this.googleUser});
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +51,11 @@ class User_Button extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const SignupRegister(role: 'Customer'),
+                        builder: (context) => SignupRegister(
+                          role: 'Customer',
+                          email: googleUser?.email,
+                          name: googleUser?.displayName,
+                        ),
                       ),
                     );
                   },
@@ -66,8 +72,10 @@ class User_Button extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const TailorSignUpPage(role: 'Tailor'),
+                        builder: (context) => TailorSignUpPage(
+                          role: 'Tailor',
+                          email: googleUser?.email,
+                        ),
                       ),
                     );
                   },

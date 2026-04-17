@@ -87,7 +87,14 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: const Color(0xFFFCF8F8), elevation: 2),
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 72, 112, 172),
+        elevation: 2,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+        ),
+      ),
       backgroundColor: const Color(0xFFEEEEEE),
       body: Stack(
         children: [

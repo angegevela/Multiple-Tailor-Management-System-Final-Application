@@ -264,7 +264,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
                 .collection('Appointment Forms')
                 .doc(doc.id)
                 .update({'status': 'Overdue'});
-            await FirebaseFirestore.instance.collection('notifications').add({
+            await FirebaseFirestore.instance.collection('Notifications').add({
               'title': 'Order Overdue',
               'body':
                   "The order for ${data['garmentSpec'] ?? 'a garment'} is now overdue.",
@@ -275,7 +275,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
               'readBy': <String>[],
             });
 
-            await FirebaseFirestore.instance.collection('notifications').add({
+            await FirebaseFirestore.instance.collection('Notifications').add({
               'title': 'Order Overdue',
               'body':
                   "Your order for ${data['garmentSpec'] ?? 'a garment'} is now overdue. Please contact your tailor for updates.",
@@ -307,13 +307,13 @@ class _TailorHomePageState extends State<TailorHomePage> {
 
       if (message != null) {
         final existingNotifs = await FirebaseFirestore.instance
-            .collection('notifications')
+            .collection('Notifications')
             .where('to', isEqualTo: currentUid)
             .where('body', isEqualTo: message)
             .get();
 
         if (existingNotifs.docs.isEmpty) {
-          await FirebaseFirestore.instance.collection('notifications').add({
+          await FirebaseFirestore.instance.collection('Notifications').add({
             'to': currentUid,
             'title': 'Upcoming Due Date',
             'body': message,
@@ -335,7 +335,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
     final customerId = FirebaseAuth.instance.currentUser!.uid;
 
     await FirebaseFirestore.instance
-        .collection('notifications')
+        .collection('Notifications')
         .doc(notif.id)
         .update({'accepted': true});
 
@@ -347,7 +347,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
           'status': 'Accepted',
         });
 
-    await FirebaseFirestore.instance.collection('notifications').add({
+    await FirebaseFirestore.instance.collection('Notifications').add({
       'title': 'Customer Response',
       'body': 'The customer agreed to extend the deadline.',
       'appointmentId': appointmentId,
@@ -363,7 +363,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
     final tailorId = notif.tailorId;
     final customerId = FirebaseAuth.instance.currentUser!.uid;
 
-    await FirebaseFirestore.instance.collection('notifications').add({
+    await FirebaseFirestore.instance.collection('Notifications').add({
       'title': 'Customer Response',
       'body': 'The customer wants to discuss the order.',
       'appointmentId': appointmentId,
@@ -421,7 +421,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
     Map<String, dynamic>? extra,
   }) async {
     try {
-      await FirebaseFirestore.instance.collection('notifications').add({
+      await FirebaseFirestore.instance.collection('Notifications').add({
         'to': toUserId,
         'title': title,
         'body': body,
@@ -503,7 +503,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
           appointmentData['customerId'] ?? appointmentData['customerID'];
 
       if (customerId != null) {
-        await FirebaseFirestore.instance.collection('notifications').add({
+        await FirebaseFirestore.instance.collection('Notifications').add({
           'to': customerId,
           'title': 'Appointment Cancelled',
           'body':
@@ -2680,7 +2680,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
 
                   try {
                     await FirebaseFirestore.instance
-                        .collection('notifications')
+                        .collection('Notifications')
                         .add({
                           'toCustomerId': customerId,
                           'title': 'Update from Tailor',

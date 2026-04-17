@@ -22,6 +22,7 @@ class AppointmentData {
   final String? tailorAssigned;
   final int? quantity;
   final GeoPoint? customerLocation;
+  final String? status;
 
   AppointmentData({
     required this.appointmentId,
@@ -45,6 +46,7 @@ class AppointmentData {
     required this.tailorAssigned,
     this.quantity,
     this.customerLocation,
+    this.status,
   });
 
   Map<String, dynamic> toMap() {
@@ -73,6 +75,7 @@ class AppointmentData {
       "tailorAssigned": tailorAssigned,
       "quantity": quantity,
       "customerLocation": customerLocation,
+      "status": status,
     };
   }
 
@@ -114,6 +117,7 @@ class AppointmentData {
       customerLocation: map['customerLocation'] is GeoPoint
           ? map['customerLocation'] as GeoPoint
           : null,
+      status: map['status'],
     );
   }
 

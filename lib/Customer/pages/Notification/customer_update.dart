@@ -105,11 +105,12 @@ class UpdateFromTailor extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-
             _buildInfoCard('Appointment ID', appointmentId),
             _buildInfoCard(
               'Received at',
-              DateFormat('h:mm a - MMMM d, yyyy').format(timestamp),
+              timestamp != null
+                  ? DateFormat('h:mm a - MMMM d, yyyy').format(timestamp)
+                  : 'No timestamp available',
             ),
             _buildInfoCard('Customer ID', customerId),
           ],

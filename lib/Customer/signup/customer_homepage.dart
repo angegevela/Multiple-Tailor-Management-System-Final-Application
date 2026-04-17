@@ -123,19 +123,19 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                       "Palawan 5300",
                       style: TextStyle(color: textColor, fontSize: fontSize),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "PHONE NUMBER",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                        fontSize: fontSize,
-                      ),
-                    ),
-                    Text(
-                      "(123) 4567890",
-                      style: TextStyle(color: textColor, fontSize: fontSize),
-                    ),
+                    // const SizedBox(height: 16),
+                    // Text(
+                    //   "PHONE NUMBER",
+                    //   style: TextStyle(
+                    //     fontWeight: FontWeight.bold,
+                    //     color: textColor,
+                    //     fontSize: fontSize,
+                    //   ),
+                    // ),
+                    // Text(
+                    //   "(123) 4567890",
+                    //   style: TextStyle(color: textColor, fontSize: fontSize),
+                    // ),
                     const SizedBox(height: 16),
                     Text(
                       "EMAIL",
@@ -146,19 +146,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                       ),
                     ),
                     Text(
-                      "developer1_threadhub@gmail.com",
-                      style: TextStyle(color: textColor, fontSize: fontSize),
-                    ),
-                    Text(
-                      "developer2_threadhub@gmail.com",
-                      style: TextStyle(color: textColor, fontSize: fontSize),
-                    ),
-                    Text(
-                      "developer3_threadhub@gmail.com",
-                      style: TextStyle(color: textColor, fontSize: fontSize),
-                    ),
-                    Text(
-                      "developer4_threadhub@gmail.com",
+                      "threadhub@gmail.com",
                       style: TextStyle(color: textColor, fontSize: fontSize),
                     ),
                   ],

@@ -16,11 +16,13 @@ import 'package:crypto/crypto.dart';
 class TailorSignUpPage extends StatefulWidget {
   final String role;
   final bool acceptedTerms;
+  final String? email;
 
   const TailorSignUpPage({
     super.key,
     required this.role,
     this.acceptedTerms = false,
+    this.email,
   });
 
   @override
@@ -83,6 +85,9 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.email != null) {
+      _emailController.text = widget.email!;
+    }
     _rememberMe = widget.acceptedTerms;
   }
 
@@ -779,12 +784,31 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
                         TextField(
                           controller: _businessNumberController,
                           keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            String cleaned = value.replaceAll(
+                              RegExp(r'[^d]'),
+                              '',
+                            );
+                            if (cleaned.length > 2 &&
+                                cleaned.startsWith('09')) {
+                              String formatted = '+63' + cleaned.substring(1);
+                              if (_businessNumberController.text != formatted) {
+                                _businessNumberController.value =
+                                    TextEditingValue(
+                                      text: formatted,
+                                      selection: TextSelection.collapsed(
+                                        offset: formatted.length,
+                                      ),
+                                    );
+                              }
+                            }
+                          },
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             filled: true,
                             fillColor: Color(0xFFE1EBEE),
-                            labelText: 'eg. +63 9123456789',
-                            prefixText: '+63 ',
+                            labelText: 'Enter your business number',
+                            hintText: 'Type 09... or +63...',
                             errorText: _businessNumber
                                 ? 'Business number is required'
                                 : null,

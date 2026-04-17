@@ -152,7 +152,7 @@ class _TailorResultsPageState extends State<TailorResultsPage> {
           .get();
 
       debugPrint(
-        "📂 Portfolio fetched: ${snapshot.docs.length} items for $tailorUid",
+        "Portfolio fetched: ${snapshot.docs.length} items for $tailorUid",
       );
       return snapshot.docs;
     } catch (e) {
@@ -1178,7 +1178,7 @@ class _TailorResultsPageState extends State<TailorResultsPage> {
     );
 
     final now = DateTime.now();
-    await FirebaseFirestore.instance.collection("notifications").add({
+    await FirebaseFirestore.instance.collection("Notifications").add({
       "title": "Request Sent",
       "body":
           "Your appointment request has been sent to ${selectedTailor['shopName']}.",
@@ -1190,7 +1190,7 @@ class _TailorResultsPageState extends State<TailorResultsPage> {
       "appointmentId": widget.data.appointmentId,
     });
 
-    await FirebaseFirestore.instance.collection("notifications").add({
+    await FirebaseFirestore.instance.collection("Notifications").add({
       "title": "New Appointment Request",
       "body": "You’ve received a new appointment request from a customer.",
       "toTailorId": selectedTailor['id'],

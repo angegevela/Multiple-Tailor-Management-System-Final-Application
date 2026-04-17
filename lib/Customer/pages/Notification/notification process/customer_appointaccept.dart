@@ -137,7 +137,7 @@ class _UpdatedAppointmentPageState extends State<UpdatedAppointmentPage> {
         appointmentData!['customerstatus'] = accepted ? 'Accepted' : 'Declined';
       });
 
-      final notificationsRef = firestore.collection('notifications');
+      final notificationsRef = firestore.collection('Notifications');
 
       if (widget.customerId.isNotEmpty) {
         await notificationsRef.add({

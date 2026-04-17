@@ -56,7 +56,7 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
           _usernameController.text = data['username'] ?? '';
           _phoneController.text = data['businessNumber']?.toString() ?? '';
           _emailController.text = data['email'] ?? user.email ?? '';
-          _addressController.text = data['address'] ?? '';
+          _addressController.text = data['fullAddress'] ?? '';
           _shopNameController.text = data['shopName'] ?? '';
           _profileImageUrl = data['profileImageUrl'] ?? '';
         });
@@ -127,7 +127,7 @@ class _TailorPersonalInformationState extends State<TailorPersonalInformation> {
           .update({
             'username': _usernameController.text.trim(),
             'businessNumber': _phoneController.text.trim(),
-            'address': _addressController.text.trim(),
+            'fullAddress': _addressController.text.trim(),
             'profileImageUrl': _profileImageUrl ?? '',
           });
 

@@ -36,12 +36,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             Padding(
               padding: const EdgeInsets.all(3.0),
               child: Text(
-                'Please enter your email to reset your password',
+                'Please enter your email to reset your password, use the email you use to sign up your account on this application',
                 style: GoogleFonts.inter(
                   color: Colors.grey[700],
                   fontWeight: FontWeight.w500,
                 ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.justify,
               ),
             ),
 
@@ -120,9 +120,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Email Sent'),
-          content: const Text(
+          backgroundColor: Colors.blueGrey[100],
+          title: Text(
+            'Email Sent',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.songMyung(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: Text(
             'Please check your email to reset your password.',
+            style: GoogleFonts.playfairDisplay(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
           ),
           actions: [
             TextButton(
@@ -130,7 +142,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 Navigator.pop(context); // close dialog
                 Navigator.pop(context); // go back to login
               },
-              child: const Text('OK'),
+              child: Text(
+                'Okay',
+                style: GoogleFonts.playfairDisplay(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ),
           ],
         ),

@@ -30,7 +30,7 @@ Future<void> main() async {
 
   // Initialize Local Notifications
   const AndroidInitializationSettings initSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/launcher_icon');
   const InitializationSettings initSettings = InitializationSettings(
     android: initSettingsAndroid,
   );
@@ -96,6 +96,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
+
       // themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
       // theme: ThemeData(
       //   brightness: Brightness.light,
@@ -108,7 +109,6 @@ class _MyAppState extends State<MyApp> {
       //   colorScheme: const ColorScheme.dark(),
       //   useMaterial3: true,
       // ),
-
       home: const SplashScreen(),
     );
   }

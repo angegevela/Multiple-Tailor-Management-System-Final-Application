@@ -79,15 +79,61 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   String? _measurementType;
   String? _measurementTypeFromManual;
 
+  // Adding automation of customer profile data
+  Map<String, dynamic>? _customerProfile;
+  bool _isloadingProfile = false;
+  bool _showNamePhoneFields = true;
+
   @override
   void initState() {
     super.initState();
     _receivedMeasurements = widget.measurements;
     _measurementType = widget.measurementType;
 
+    _loadCustomerProfile();
     _loadDraft();
     if (widget.usedMeasurementId != null) {
       _loadUsedMeasurement();
+    }
+  }
+
+  // Loading customer from Firebase-Firestore
+  Future<void> _loadCustomerProfile() async {
+    setState(() => _isloadingProfile = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data()!;
+
+          setState(() {
+            _customerProfile = data;
+
+            final fullName =
+                "${data['firstName'] ?? ''} ${data['surname'] ?? ''}".trim();
+
+            if (fullName.isNotEmpty && _fullNameController.text.isEmpty) {
+              _fullNameController.text = fullName;
+            }
+
+            if (data['phoneNumber'] != null &&
+                _phonenumberController.text.isEmpty) {
+              _phonenumberController.text = data['phoneNumber'].toString();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print("Error loading profile: $e");
+    } finally {
+      setState(() => _isloadingProfile = false);
     }
   }
 
@@ -229,7 +275,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   }
 
   // Firebase + Supabase Integration
-  Future<AppointmentData?> _saveAppointment() async {
+  Future<AppointmentData?> _saveAppointment({bool finalize = false}) async {
     try {
       final supabase = Supabase.instance.client;
       final user = FirebaseAuth.instance.currentUser;
@@ -285,6 +331,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
             : null,
         manualMeasurementType: _measurementTypeFromManual,
         customerId: user?.uid ?? "unknown",
+        status: finalize ? 'confirmed' : 'draft',
         tailorId: null,
         tailorAssigned: null,
       );
@@ -309,13 +356,14 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
 
   Map<String, Map<String, String>> _receivedMeasurements = {};
   bool _isloading = false;
+
   // Notice for first backout on arrow button
-  Future<void> _handleBackPressed() async {
+  Future<bool> _handleBackPressed() async {
     final prefs = await SharedPreferences.getInstance();
     bool hasBeenNotice = prefs.getBool('hasSeenBackNotice') ?? false;
 
     if (!hasBeenNotice) {
-      // First Notice --> to show the dialog
+      // First time - Show dialog
       final shouldLeave = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -326,7 +374,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
             textAlign: TextAlign.center,
           ),
           content: Text(
-            "If you go back, your data will be saved automitically.",
+            "If you go back, your data will be saved automatically.",
             style: GoogleFonts.songMyung(fontSize: 16),
             textAlign: TextAlign.center,
           ),
@@ -335,7 +383,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => Navigator.pop(context, false), // Stay
                   style: TextButton.styleFrom(
                     backgroundColor: Colors.blueGrey,
                     foregroundColor: Colors.white,
@@ -347,11 +395,14 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                   child: Text(
                     "Stay",
                     style: GoogleFonts.songMyung(fontSize: 16),
-                    textAlign: TextAlign.left,
                   ),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: () async {
+                    await prefs.setBool('hasSeenBackNotice', true);
+                    await _saveDraft();
+                    Navigator.pop(context, true); // Leave
+                  },
                   style: TextButton.styleFrom(
                     backgroundColor: const Color(0xFFCA6180),
                     foregroundColor: Colors.white,
@@ -363,7 +414,6 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                   child: Text(
                     "Leave",
                     style: GoogleFonts.songMyung(fontSize: 16),
-                    textAlign: TextAlign.right,
                   ),
                 ),
               ],
@@ -373,14 +423,14 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
       );
 
       if (shouldLeave == true) {
-        await prefs.setBool('hasSeenBackNotice', true);
         await _saveDraft();
-        Navigator.pop(context);
-      } else {
-        //After One Time --> Directs to no dialog to show
-        await _saveDraft();
-        Navigator.pop(context);
+        return true; // Allow pop
       }
+      return false; // Stay
+    } else {
+      // No dialog - just save and leave
+      await _saveDraft();
+      return true; // Allow pop
     }
   }
 
@@ -388,11 +438,18 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   Widget build(BuildContext context) {
     final fontSize = context.watch<FontProvider>().fontSize;
     return Scaffold(
+      backgroundColor: const Color(0xFFEEEEEE),
       appBar: AppBar(
         backgroundColor: const Color(0xFF6082B6),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: _handleBackPressed,
+          // onPressed: _handleBackPressed,
+          onPressed: () async {
+            final shouldPop = await _handleBackPressed();
+            if (shouldPop && mounted) {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: Text(
           'Appointment Booking Form',
@@ -402,9 +459,9 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
           ),
         ),
       ),
-      body: Scaffold(
-        backgroundColor: const Color(0xFFEEEEEE),
-        body: SingleChildScrollView(
+      body: WillPopScope(
+        onWillPop: _handleBackPressed,
+        child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(6.0),
             child: Column(
@@ -421,43 +478,135 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                   ),
                 ),
                 SizedBox(height: 10),
+
+                if (_isloadingProfile)
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 10),
+                          Text(
+                            "Loading your profile data. Please Wait",
+                            style: TextStyle(fontSize: fontSize),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 // Full Name
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Full Name',
-                        style: TextStyle(
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Full Name',
+                            style: TextStyle(
+                              fontSize: fontSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (_customerProfile == null ||
+                              _customerProfile!['fullName'] == null)
+                            InkWell(
+                              onTap: _isloadingProfile
+                                  ? null
+                                  : _loadCustomerProfile,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Color(0xFF6082B6),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: ShaderMask(
+                                  shaderCallback: (bounds) => LinearGradient(
+                                    colors: [Color(0xFF6082B6), Colors.blue],
+                                  ).createShader(bounds),
+                                  child: Text(
+                                    'Load Profile',
+                                    style: TextStyle(
+                                      fontSize: fontSize,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 8),
-                      TextField(
-                        controller: _fullNameController,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          labelText: 'Enter your Full Name',
-                          contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 1.5,
+                      if (_showNamePhoneFields)
+                        TextField(
+                          controller: _fullNameController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            labelText: _customerProfile?['fullName'] != null
+                                ? 'Pre-filled from profile'
+                                : 'Enter your Full Name',
+                            prefixIcon: _customerProfile?['fullName'] != null
+                                ? Icon(Icons.verified, color: Colors.green)
+                                : null,
+                            contentPadding: EdgeInsets.fromLTRB(18, 22, 48, 2),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(15),
                             ),
-                            borderRadius: BorderRadius.circular(15),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.black,
+                                width: 2.5,
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.black,
-                              width: 2.5,
-                            ),
-                            borderRadius: BorderRadius.circular(15),
+                          readOnly:
+                              _customerProfile?['fullName'] != null &&
+                              !_showNamePhoneFields,
+                        ),
+                      if (!_showNamePhoneFields &&
+                          _customerProfile?['fullName'] != null)
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green, width: 1),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.person, color: Colors.green),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _fullNameController.text,
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.green),
+                                onPressed: () =>
+                                    setState(() => _showNamePhoneFields = true),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -476,7 +625,50 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      if (_customerProfile == null ||
+                          _customerProfile!['phoneNumber'] == null)
+                        TextButton(
+                          onPressed: _isloadingProfile
+                              ? null
+                              : _loadCustomerProfile,
+                          child: Text(
+                            'Load Profile',
+                            style: TextStyle(
+                              fontSize: fontSize,
+                              color: Color(0xFF6082B6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+
                       const SizedBox(height: 8),
+                      if (!_showNamePhoneFields &&
+                          _customerProfile?['phoneNumber'] != null)
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green, width: 1),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.phone, color: Colors.green),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _phonenumberController.text,
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.green),
+                                onPressed: () =>
+                                    setState(() => _showNamePhoneFields = true),
+                              ),
+                            ],
+                          ),
+                        ),
                       TextField(
                         controller: _phonenumberController,
                         decoration: InputDecoration(
@@ -680,21 +872,22 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                             },
                       ),
                       if (_isOtherSelected)
-                      Padding(padding: const EdgeInsets.only(top:8.0),
-                      child: TextField(
-                        controller: _otherServiceController,
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          labelText: 'Enter your service',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          )
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: TextField(
+                            controller: _otherServiceController,
+                            textAlign: TextAlign.center,
+                            decoration: InputDecoration(
+                              labelText: 'Enter your service',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onChanged: (val) {
+                              _servicesController.text = val;
+                            },
+                          ),
                         ),
-                        onChanged: (val) {
-                          _servicesController.text = val;
-                        },
-                      ),
-                      )
                     ],
                   ),
                 ),
@@ -1415,7 +1608,10 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                     _phonenumberController.text.isEmpty ||
                                     _garmentSpecController.text.isEmpty ||
                                     _servicesController.text.isEmpty ||
-                                    _selectedType == null) {
+                                    _quantityController.text.isEmpty ||
+                                    _selectedType == null ||
+                                    appointmentDateTime == null ||
+                                    dueDateTime == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
@@ -1425,12 +1621,25 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                   );
                                   return;
                                 }
+                                final quantity = int.tryParse(
+                                  _quantityController.text,
+                                );
+
+                                if (quantity == null || quantity <= 0) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Quantity must be a valid number greater than 0",
+                                      ),
+                                    ),
+                                  );
+                                }
 
                                 setState(() => _isloading = true);
 
                                 try {
                                   final appointmentData =
-                                      await _saveAppointment();
+                                      await _saveAppointment(finalize: false);
 
                                   if (appointmentData != null) {
                                     Navigator.push(

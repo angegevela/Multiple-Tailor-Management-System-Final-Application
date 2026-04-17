@@ -42,6 +42,20 @@ class _TailorAvailabilitySettingsState
     "Sunday": {"start": null, "end": null},
   };
 
+  // Tracking validation on working hours
+  bool _validationError = false;
+
+  // declaration continuation
+  bool _hasMissingTimes() {
+    for (String day in _selectedDays) {
+      final start = _workingHours[day]!["start"];
+      final end = _workingHours[day]!["end"];
+
+      if (start == null || end == null) return true;
+    }
+    return false;
+  }
+
   Map<String, bool> _expandedDays = {};
   // Days Dropdown State
   bool _isDayDropdownOpen = false;
@@ -159,6 +173,7 @@ class _TailorAvailabilitySettingsState
                       setState(() {
                         if (checked == true) {
                           _selectedDays.add(day);
+                          _expandedDays[day] = true;
                         } else {
                           _selectedDays.remove(day);
                         }
@@ -519,51 +534,69 @@ class _TailorAvailabilitySettingsState
                     final start = _workingHours[day]!["start"];
                     final end = _workingHours[day]!["end"];
                     final isOpen = _expandedDays[day] ?? false;
+                    final isMissingTime = start == null || end == null;
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isMissingTime
+                            ? Colors.red.shade50
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: Colors.grey.shade400,
+                          color: isMissingTime
+                              ? Colors.red
+                              : Colors.grey.shade400,
                           width: 1,
                         ),
                       ),
-
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _expandedDays[day] = !(isOpen);
-                              });
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  day,
-                                  style: TextStyle(
-                                    fontSize: tailorfontSize,
-                                    fontWeight: FontWeight.bold,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    day,
+                                    style: TextStyle(
+                                      fontSize: tailorfontSize,
+                                      fontWeight: FontWeight.bold,
+                                      color: isMissingTime
+                                          ? Colors.red
+                                          : Colors.black,
+                                    ),
                                   ),
+                                  if (isMissingTime)
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 8),
+                                      child: Text(
+                                        "⚠️ Required",
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              GestureDetector(
+                                onTap: () => setState(
+                                  () => _expandedDays[day] = !isOpen,
                                 ),
-
-                                Icon(
+                                child: Icon(
                                   isOpen
                                       ? Icons.keyboard_arrow_up
                                       : Icons.keyboard_arrow_down,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-
                           if (isOpen) ...[
                             const SizedBox(height: 10),
-
                             Row(
                               children: [
                                 Expanded(
@@ -577,19 +610,26 @@ class _TailorAvailabilitySettingsState
                                       decoration: BoxDecoration(
                                         color: Colors.grey.shade200,
                                         borderRadius: BorderRadius.circular(6),
+                                        border: start == null
+                                            ? Border.all(
+                                                color: Colors.red,
+                                                width: 1,
+                                              )
+                                            : null,
                                       ),
                                       child: Text(
-                                        start ?? "Start time",
+                                        start ?? "Start time *",
                                         style: TextStyle(
                                           fontSize: tailorfontSize,
+                                          color: start == null
+                                              ? Colors.red
+                                              : null,
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
-
                                 const SizedBox(width: 10),
-
                                 Expanded(
                                   child: GestureDetector(
                                     onTap: () => _pickTime(day, false),
@@ -601,11 +641,20 @@ class _TailorAvailabilitySettingsState
                                       decoration: BoxDecoration(
                                         color: Colors.grey.shade200,
                                         borderRadius: BorderRadius.circular(6),
+                                        border: end == null
+                                            ? Border.all(
+                                                color: Colors.red,
+                                                width: 1,
+                                              )
+                                            : null,
                                       ),
                                       child: Text(
-                                        end ?? "End time",
+                                        end ?? "End time *",
                                         style: TextStyle(
                                           fontSize: tailorfontSize,
+                                          color: end == null
+                                              ? Colors.red
+                                              : null,
                                         ),
                                       ),
                                     ),
@@ -769,6 +818,18 @@ class _TailorAvailabilitySettingsState
                                 hintText: "Enter number",
                                 filled: true,
                                 fillColor: Colors.white,
+                                errorText:
+                                    _numberofCustomerController.text.isEmpty
+                                    ? "Required"
+                                    : null,
+                                errorStyle: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.red),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ),
@@ -826,6 +887,32 @@ class _TailorAvailabilitySettingsState
                         ),
                       ],
                     ),
+
+                    if (_selectedDays.isNotEmpty && _hasMissingTimes())
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning, color: Colors.red, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Please set start & end times for all selected days before saving",
+                                style: TextStyle(
+                                  color: Colors.red.shade800,
+                                  fontSize: tailorfontSize,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -833,6 +920,7 @@ class _TailorAvailabilitySettingsState
           ),
         ),
       ),
+
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
@@ -846,67 +934,79 @@ class _TailorAvailabilitySettingsState
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () async {
-              final user = FirebaseAuth.instance.currentUser;
-              if (user == null) return;
+            onPressed:
+                _selectedDays.isEmpty &&
+                    !_hasMissingTimes() &&
+                    _numberofCustomerController.text.isEmpty
+                ? () async {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
 
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) =>
+                          const Center(child: CircularProgressIndicator()),
+                    );
 
-              try {
-                await FirebaseFirestore.instance
-                    .collection('Users')
-                    .doc(user.uid)
-                    .set({
-                      "availability": {
-                        "isAvailable": _isAvailable,
-                        "days": _selectedDays,
-                        "timeSlot": _selectedTime,
-                        "maxCustomersPerDay":
-                            int.tryParse(_numberofCustomerController.text) ?? 0,
-                        "servicesOffered": _selectedServicesOffered,
-                        "assignedTo": _assignedToController.text,
-                      },
-                    }, SetOptions(merge: true));
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('Users')
+                          .doc(user.uid)
+                          .set({
+                            "availability": {
+                              "isAvailable": _isAvailable,
 
-                if (!mounted) return;
+                              "workingHours": _workingHours,
 
-                if (_dayOverlayEntry?.mounted ?? false) {
-                  _dayOverlayEntry?.remove();
-                }
-                if (_timeOverlayEntry?.mounted ?? false) {
-                  _timeOverlayEntry?.remove();
-                }
-                if (_serviceOverlayEntry?.mounted ?? false) {
-                  _serviceOverlayEntry?.remove();
-                }
+                              "days": _selectedDays,
+                              "timeSlot": _selectedTime,
+                              "maxCustomersPerDay":
+                                  int.tryParse(
+                                    _numberofCustomerController.text,
+                                  ) ??
+                                  0,
+                              "servicesOffered": _selectedServicesOffered,
+                              "assignedTo": _assignedToController.text,
+                            },
+                            "hasAvailability": true,
+                          }, SetOptions(merge: true));
 
-                Navigator.of(context, rootNavigator: true).pop();
+                      if (!mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Availability saved successfully!"),
-                  ),
-                );
+                      if (_dayOverlayEntry?.mounted ?? false) {
+                        _dayOverlayEntry?.remove();
+                      }
+                      if (_timeOverlayEntry?.mounted ?? false) {
+                        _timeOverlayEntry?.remove();
+                      }
+                      if (_serviceOverlayEntry?.mounted ?? false) {
+                        _serviceOverlayEntry?.remove();
+                      }
 
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => const TailorProfileSettingsPage(),
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                Navigator.of(context, rootNavigator: true).pop();
+                      Navigator.of(context, rootNavigator: true).pop();
 
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text("Error saving: $e")));
-              }
-            },
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Availability saved successfully!"),
+                        ),
+                      );
+
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const TailorProfileSettingsPage(),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      Navigator.of(context, rootNavigator: true).pop();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Error saving: $e")),
+                      );
+                    }
+                  }
+                : null,
             child: Text(
               "Confirm",
               style: GoogleFonts.chauPhilomeneOne(

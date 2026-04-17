@@ -192,7 +192,7 @@ class ReviewReport extends StatelessWidget {
                 .collection('Reports')
                 .add(reportData);
 
-            await FirebaseFirestore.instance.collection('notifications').add({
+            await FirebaseFirestore.instance.collection('Notifications').add({
               'title': 'New Report Submitted',
               'body':
                   'A new report was submitted by $respondentName about $reporteeName.',

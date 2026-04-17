@@ -97,6 +97,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
       if (appointmentDoc.exists) {
         final a = appointmentDoc.data();
+
+        currentPrice = a?['price'] ?? widget.price;
+        _assignedTailor = a?['tailorAssigned'] ?? "";
+        _messages.clear();
+
+        if (a?['messages'] != null) {
+          _messages.addAll(List<String>.from(a?['messages']));
+        }
+
         final List<dynamic>? uploadedImages = a?['uploadedImages'];
 
         if (uploadedImages != null && uploadedImages.isNotEmpty) {
@@ -111,6 +120,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       }
 
       setState(() {
+        currentPrice = currentPrice;
+        _assignedTailorController.text = _assignedTailor ?? "";
         _customizationImages = signedUrls;
       });
     } catch (e) {
@@ -548,7 +559,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
             Navigator.pop(context, {
               'price': currentPrice ?? "",
               'messages': _messages,
-              'assignedTailor': _assignedTailor ?? "",
+              'assignedTailor': _assignedTailorController.text.trim(),
             });
 
             showGeneralDialog(

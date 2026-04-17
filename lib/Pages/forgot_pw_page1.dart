@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:threadhub_system/Pages/forgot_pw_page2.dart';
 import 'package:threadhub_system/Pages/forgot_pw_page3.dart';
 
-
 class ForgotPasswordbutton extends StatefulWidget {
   const ForgotPasswordbutton({super.key});
 
@@ -29,7 +28,7 @@ class _ForgotPasswordStatebutton extends State<ForgotPasswordbutton> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, 
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 10),
             Text(
@@ -55,20 +54,19 @@ class _ForgotPasswordStatebutton extends State<ForgotPasswordbutton> {
               },
             ),
 
-            // Option 2 - Phone
-            RadioListTile<String>(
-              title: Text(
-                'Send a reset link to my phone number',
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-              ),
-              value: 'phone-option',
-              groupValue: _selectedOption,
-              activeColor: Colors.black,
-              onChanged: (value) {
-                setState(() => _selectedOption = value);
-              },
-            ),
-
+            // // Option 2 - Phone
+            // RadioListTile<String>(
+            //   title: Text(
+            //     'Send a reset code to my phone number',
+            //     style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+            //   ),
+            //   value: 'phone-option',
+            //   groupValue: _selectedOption,
+            //   activeColor: Colors.black,
+            //   onChanged: (value) {
+            //     setState(() => _selectedOption = value);
+            //   },
+            // ),
             SizedBox(height: 30),
 
             Center(
@@ -81,24 +79,30 @@ class _ForgotPasswordStatebutton extends State<ForgotPasswordbutton> {
                     return;
                   }
 
-                  if (_selectedOption == 'email-option') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) {
-                          return ForgotPasswordPage();
-                        }, // to email flow
-                      ),
-                    );
-                  } else if (_selectedOption == 'phone-option') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            ForgotPasswordverify(), 
-                      ),
-                    );
-                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ForgotPasswordPage(),
+                    ),
+                  );
+
+                  // if (_selectedOption == 'email-option') {
+                  //   Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (context) {
+                  //         return ForgotPasswordPage();
+                  //       }, // to email flow
+                  //     ),
+                  //   );
+                  // } else if (_selectedOption == 'phone-option') {
+                  //   Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (context) => ForgotPasswordverify(),
+                  //     ),
+                  //   );
+                  // }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueGrey,

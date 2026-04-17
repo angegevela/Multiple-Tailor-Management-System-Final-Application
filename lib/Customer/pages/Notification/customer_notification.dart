@@ -24,7 +24,7 @@ class _CustomerNotificationState extends State<CustomerNotification> {
   Future<void> markAsRead(AppNotification notif) async {
     final userId = widget.customerId;
     await FirebaseFirestore.instance
-        .collection('notifications')
+        .collection('Notifications')
         .doc(notif.id)
         .update({
           'readBy': FieldValue.arrayUnion([userId]),
@@ -37,7 +37,7 @@ class _CustomerNotificationState extends State<CustomerNotification> {
     for (var n in notifs) {
       if (!n.readBy.contains(userId)) {
         batch.update(
-          FirebaseFirestore.instance.collection('notifications').doc(n.id),
+          FirebaseFirestore.instance.collection('Notifications').doc(n.id),
           {
             'readBy': FieldValue.arrayUnion([userId]),
           },
@@ -147,6 +147,7 @@ class _CustomerNotificationState extends State<CustomerNotification> {
                                 .doc(notif.appointmentId)
                                 .get();
                             if (!snap.exists) return;
+
                             final appointmentData = AppointmentData.fromMap(
                               snap.data()!,
                             );
@@ -312,27 +313,38 @@ class AppNotification {
 
   factory AppNotification.fromFirestore(Map<String, dynamic> data, String id) {
     final toUserId = data['toCustomerId'] ?? data['to'] ?? '';
+
+    final rawReadBy = data['readBy'];
+
+    List<String> readByList;
+
+    if (rawReadBy is List) {
+      readByList = rawReadBy.map((e) => e.toString()).toList();
+    } else if (rawReadBy is String) {
+      readByList = [rawReadBy];
+    } else {
+      readByList = [];
+    }
+
     return AppNotification(
       id: id,
       title: data['title'] ?? '',
       body: data['body'] ?? '',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate(),
       appointmentId: data['appointmentId'] ?? '',
-      readBy: data.containsKey('readBy')
-          ? List.from(data['readBy'])
-          : (data['read'] == true ? [toUserId] : []),
+      readBy: readByList,
     );
   }
 }
 
 Stream<List<AppNotification>> getNotifications(String customerId) {
   final stream1 = FirebaseFirestore.instance
-      .collection('notifications')
+      .collection('Notifications')
       .where('toCustomerId', isEqualTo: customerId)
       .snapshots();
 
   final stream2 = FirebaseFirestore.instance
-      .collection('notifications')
+      .collection('Notifications')
       .where('to', isEqualTo: customerId)
       .snapshots();
 

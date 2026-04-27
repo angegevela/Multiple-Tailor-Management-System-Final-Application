@@ -79,51 +79,83 @@ class AppointmentData {
     };
   }
 
-  static AppointmentData fromMap(Map<String, dynamic> map) {
+  static AppointmentData fromMap(Map<String, dynamic> map, {String? docId}) {
     return AppointmentData(
-      appointmentId: map['appointmentId'] ?? '',
-      fullName: map['fullName'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? '',
-      garmentSpec: map['garmentSpec'] ?? '',
-      services: map['services'] ?? '',
-      customizationDescription: map['customizationDescription'],
+      appointmentId: docId ?? map['appointmentId']?.toString() ?? '',
+
+      fullName: map['fullName']?.toString() ?? '',
+
+      phoneNumber: map['phoneNumber'] is int
+          ? map['phoneNumber']
+          : int.tryParse(map['phoneNumber']?.toString() ?? ''),
+
+      garmentSpec: map['garmentSpec']?.toString() ?? '',
+      services: map['services']?.toString() ?? '',
+
+      customizationDescription: map['customizationDescription']?.toString(),
+
       uploadedImages: map['uploadedImages'] != null
-          ? List<String>.from(map['uploadedImages'])
+          ? List<String>.from(
+              (map['uploadedImages'] as List).map((e) => e.toString()),
+            )
           : [],
-      message: map['message'] ?? '',
+
+      message: map['message']?.toString() ?? '',
+
       appointmentDateTime: map['appointmentDateTime'] is Timestamp
           ? (map['appointmentDateTime'] as Timestamp).toDate()
           : null,
-      priority: map['priority'],
+
+      priority: map['priority']?.toString(),
+
       dueDateTime: map['dueDateTime'] is Timestamp
           ? (map['dueDateTime'] as Timestamp).toDate()
           : null,
-      duepriority: map['duepriority'],
-      measurementMethod: map['measurementMethod'],
+
+      duepriority: map['duepriority']?.toString(),
+
+      measurementMethod: map['measurementMethod']?.toString(),
+
       manualMeasurements: map['manualMeasurements'] != null
           ? Map<String, Map<String, String>>.from(
               (map['manualMeasurements'] as Map).map(
-                (k, v) => MapEntry(k, Map<String, String>.from(v)),
+                (k, v) => MapEntry(
+                  k.toString(),
+                  Map<String, String>.from(
+                    (v as Map).map(
+                      (a, b) => MapEntry(a.toString(), b.toString()),
+                    ),
+                  ),
+                ),
               ),
             )
           : null,
-      manualMeasurementType: map['manualMeasurementType'],
-      customerId: map['customerId'] ?? '',
-      tailorId: map['tailorId'],
-      tailorAssigned: map['tailorAssigned'] as String?,
-      quantity: map['quantity'] != null
-          ? (map['quantity'] as num).toInt()
-          : null,
+
+      manualMeasurementType: map['manualMeasurementType']?.toString(),
+
+      customerId: map['customerId']?.toString() ?? '',
+
+      tailorId: map['tailorId']?.toString(),
+
+      tailorAssigned: map['tailorAssigned']?.toString(),
+
+      quantity: map['quantity'] is int
+          ? map['quantity']
+          : int.tryParse(map['quantity']?.toString() ?? ''),
+
       customerLocation: map['customerLocation'] is GeoPoint
-          ? map['customerLocation'] as GeoPoint
+          ? map['customerLocation']
           : null,
-      status: map['status'],
+
+      status: map['status']?.toString(),
     );
   }
 
   factory AppointmentData.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return AppointmentData.fromMap(data);
+    return AppointmentData.fromMap(
+      doc.data() as Map<String, dynamic>,
+      docId: doc.id,
+    );
   }
 
   String get dateStr => appointmentDateTime != null

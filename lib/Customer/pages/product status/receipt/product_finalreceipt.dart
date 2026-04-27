@@ -10,9 +10,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:open_filex/open_filex.dart';
 
-class ReceiptPage extends StatelessWidget {
+class ReceiptPage_ProductStatus extends StatelessWidget {
   final String appointmentId;
-  const ReceiptPage({super.key, required this.appointmentId});
+  const ReceiptPage_ProductStatus({super.key, required this.appointmentId});
+  String safeStr(dynamic v) {
+    if (v == null) return '';
+    if (v is Timestamp) return v.toDate().toString();
+    return v.toString();
+  }
 
   String _extractRelativePath(String fullUrl) {
     const prefix =
@@ -63,7 +68,7 @@ class ReceiptPage extends StatelessWidget {
         appointmentData["tailorId"].toString().isNotEmpty) {
       final tailorDoc = await FirebaseFirestore.instance
           .collection('Users')
-          .doc(appointmentData["tailorId"])
+          .doc(safeStr(appointmentData["tailorId"]))
           .get();
       if (tailorDoc.exists) {
         final tailorData = tailorDoc.data() as Map<String, dynamic>;
@@ -113,9 +118,9 @@ class ReceiptPage extends StatelessWidget {
 
           _buildSectionTitle("Appointment Details"),
           _buildDetailTable([
-            ["Full Name", appointmentData["fullName"] ?? ""],
-            ["Garment Specification", appointmentData["garmentSpec"] ?? ""],
-            ["Service", appointmentData["services"] ?? ""],
+            ["Full Name", safeStr(appointmentData["fullName"])],
+            ["Garment Specification", safeStr(appointmentData["garmentSpec"])],
+            ["Service", safeStr(appointmentData["services"])],
             [
               "Customization Detail",
               appointmentData["customizationDescription"]
@@ -125,16 +130,16 @@ class ReceiptPage extends StatelessWidget {
                   ? appointmentData["customizationDescription"]
                   : "None indicated",
             ],
-            ["Quantity", appointmentData["quantity"]?.toString() ?? ""],
-            ["Message", appointmentData["message"] ?? ""],
-            ["Measurement Method", appointmentData["measurementMethod"] ?? ""],
+            ["Quantity", safeStr(appointmentData["quantity"])],
+            ["Message", safeStr(appointmentData["message"])],
             [
-              "Manual Measurement Type",
-              appointmentData["manualMeasurementType"]?.toString().isNotEmpty ==
-                      true
-                  ? appointmentData["manualMeasurementType"]
-                  : "None indicated",
+              "Measurement Method",
+              safeStr(appointmentData["measurementMethod"]),
             ],
+            ["Phone Number", safeStr(appointmentData["phoneNumber"])],
+            ["Priority", safeStr(appointmentData["priority"])],
+            ["Status", safeStr(appointmentData["status"])],
+            ["Tailor Assigned", safeStr(appointmentData["tailorAssigned"])],
           ]),
 
           if (imageWidgets.isNotEmpty) ...[
@@ -167,7 +172,9 @@ class ReceiptPage extends StatelessWidget {
             _buildSectionTitle("Manual Measurements"),
             ...appointmentData["manualMeasurements"].entries.map((section) {
               final sectionName = section.key;
-              final sectionData = section.value as Map<String, dynamic>;
+              final sectionData = Map<String, dynamic>.from(
+                section.value ?? {},
+              );
               return pw.Container(
                 margin: const pw.EdgeInsets.only(bottom: 8),
                 decoration: pw.BoxDecoration(
@@ -203,9 +210,12 @@ class ReceiptPage extends StatelessWidget {
           pw.SizedBox(height: 16),
           _buildSectionTitle("Customer Information"),
           _buildDetailTable([
-            ["Email", userData?["email"] ?? "N/A"],
-            ["Phone Number", appointmentData["phoneNumber"] ?? "N/A"],
-            ["Location", userData?["address"] ?? "N/A"],
+            ["Email", safeStr(userData?["email"])],
+            [
+              "Phone Number",
+              appointmentData["phoneNumber"]?.toString() ?? "N/A",
+            ],
+            ["Location", safeStr(userData?["address"])],
           ]),
 
           pw.SizedBox(height: 16),
@@ -230,8 +240,7 @@ class ReceiptPage extends StatelessWidget {
             ["Tailor Assigned", appointmentData["tailorAssigned"] ?? "Pending"],
             [
               "Price",
-              (appointmentData["price"] == null ||
-                      appointmentData["price"].toString().isEmpty)
+              (safeStr(appointmentData["price"]).isEmpty)
                   ? "Pending quotation"
                   : "PHP ${appointmentData["price"]}",
             ],
@@ -270,38 +279,33 @@ class ReceiptPage extends StatelessWidget {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 4),
       child: pw.Text(
-        "Receipt of Payment",
-        style: pw.TextStyle(font: pw.Font.helveticaBold(), fontSize: 22),
+        title,
+        style: pw.TextStyle(font: pw.Font.helveticaBold(), fontSize: 14),
       ),
     );
   }
 
-  pw.Widget _buildDetailTable(List<List<String>> rows) {
+  pw.Widget _buildDetailTable(List<List<dynamic>> rows) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(3),
-        1: const pw.FlexColumnWidth(5),
-      },
-      children: rows
-          .map(
-            (row) => pw.TableRow(
-              children: [
-                pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(
-                    row[0],
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  ),
-                ),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(row[1]),
-                ),
-              ],
+      columnWidths: const {0: pw.FlexColumnWidth(3), 1: pw.FlexColumnWidth(5)},
+      children: rows.map((row) {
+        return pw.TableRow(
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: pw.Text(
+                safeStr(row[0]),
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
             ),
-          )
-          .toList(),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: pw.Text(safeStr(row[1])),
+            ),
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -334,7 +338,8 @@ class ReceiptPage extends StatelessWidget {
 
             final appointmentData =
                 snapshot.data!.data() as Map<String, dynamic>;
-            final customerId = appointmentData['customerId'];
+            String safeString(dynamic v) => v?.toString() ?? '';
+            final customerId = safeStr(appointmentData['customerId']);
 
             final userRef = FirebaseFirestore.instance
                 .collection('Users')
@@ -356,7 +361,10 @@ class ReceiptPage extends StatelessWidget {
 
                 final uploadedImages =
                     appointmentData["uploadedImages"] as List<dynamic>?;
-
+                print(appointmentData);
+                print(appointmentData["appointmentId"].runtimeType);
+                print(appointmentData["tailorId"].runtimeType);
+                print(appointmentData["price"].runtimeType);
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -395,135 +403,119 @@ class ReceiptPage extends StatelessWidget {
                       const SizedBox(height: 16),
 
                       buildSectionTitle("Appointment Details"),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          buildDetailTable([
-                            ["Full Name", appointmentData["fullName"] ?? ""],
-                            [
-                              "Garment Specification",
-                              appointmentData["garmentSpec"] ?? "",
-                            ],
-                            ["Service", appointmentData["services"] ?? ""],
-                            [
-                              "Customization Detail",
-                              appointmentData["customizationDescription"]
-                                          ?.toString()
-                                          .isNotEmpty ==
-                                      true
-                                  ? appointmentData["customizationDescription"]
-                                  : "None is indicated",
-                            ],
-                          ]),
-
-                          if (uploadedImages != null &&
-                              uploadedImages.isNotEmpty)
-                            FutureBuilder<List<String>>(
-                              future: _generateSignedUrls(uploadedImages),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: CircularProgressIndicator(),
-                                  );
-                                }
-
-                                final urls = snapshot.data!;
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Customization Detail Image",
-                                        style: GoogleFonts.songMyung(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SizedBox(
-                                        height: 200,
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          itemCount: urls.length,
-                                          separatorBuilder: (_, __) =>
-                                              const SizedBox(width: 10),
-                                          itemBuilder: (context, index) {
-                                            return ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: Image.network(
-                                                urls[index],
-                                                width: 150,
-                                                height: 150,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Container(
-                                                      width: 150,
-                                                      height: 150,
-                                                      color: Colors.grey[300],
-                                                      child: const Icon(
-                                                        Icons.broken_image,
-                                                      ),
-                                                    ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          const SizedBox(height: 10),
-                          buildDetailTable([
-                            [
-                              "Quantity",
-                              appointmentData["quantity"]?.toString() ?? "",
-                            ],
-                            ["Message", appointmentData["message"] ?? ""],
-                            [
-                              "Measurement Method",
-                              appointmentData["measurementMethod"] ?? "",
-                            ],
-                            [
-                              "Manual Measurement Type",
-                              (appointmentData["manualMeasurementType"]
-                                          ?.toString()
-                                          .isNotEmpty ==
-                                      true)
-                                  ? appointmentData["manualMeasurementType"]
-                                  : "None is indicated",
-                            ],
-                          ]),
+                      buildDetailTable([
+                        [
+                          "Full Name",
+                          appointmentData["fullName"]?.toString() ?? "",
                         ],
-                      ),
+                        [
+                          "Garment Specification",
+                          appointmentData["garmentSpec"]?.toString() ?? "",
+                        ],
+                        [
+                          "Service",
+                          appointmentData["services"]?.toString() ?? "",
+                        ],
+                        [
+                          "Customization Detail",
+                          appointmentData["customizationDescription"]
+                                      ?.toString()
+                                      .isNotEmpty ==
+                                  true
+                              ? appointmentData["customizationDescription"]
+                                    .toString()
+                              : "None indicated",
+                        ],
+                        [
+                          "Quantity",
+                          appointmentData["quantity"]?.toString() ?? "",
+                        ],
+                        [
+                          "Message",
+                          appointmentData["message"]?.toString() ?? "",
+                        ],
+                        [
+                          "Measurement Method",
+                          appointmentData["measurementMethod"]?.toString() ??
+                              "",
+                        ],
+                        [
+                          "Manual Measurement Type",
+                          appointmentData["manualMeasurementType"]
+                                      ?.toString()
+                                      .isNotEmpty ==
+                                  true
+                              ? appointmentData["manualMeasurementType"]
+                                    .toString()
+                              : "None indicated",
+                        ],
+                      ]),
+                      if (uploadedImages != null && uploadedImages.isNotEmpty)
+                        FutureBuilder<List<String>>(
+                          future: _generateSignedUrls(uploadedImages),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData)
+                              return const CircularProgressIndicator();
+                            final urls = snapshot.data!;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 12),
+                                Text(
+                                  "Customization Images",
+                                  style: GoogleFonts.songMyung(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  height: 200,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: urls.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(width: 10),
+                                    itemBuilder: (_, index) => ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.network(
+                                        urls[index],
+                                        width: 150,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          width: 150,
+                                          height: 150,
+                                          color: Colors.grey[300],
+                                          child: const Icon(Icons.broken_image),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
 
+                      const SizedBox(height: 16),
                       if (measurements != null && measurements.isNotEmpty) ...[
                         buildSectionTitle("Manual Measurements"),
                         buildMeasurementTable(measurements),
                         const SizedBox(height: 16),
                       ],
 
-                      const SizedBox(height: 16),
-
                       buildSectionTitle("Customer Information"),
                       buildDetailTable([
-                        ["Email", userData?["email"] ?? "N/A"],
+                        ["Email", userData?["email"]?.toString() ?? "N/A"],
                         [
                           "Phone Number",
-                          appointmentData["phoneNumber"] ?? "N/A",
+                          appointmentData["phoneNumber"]?.toString() ?? "N/A",
                         ],
-                        ["Location", userData?["address"] ?? "N/A"],
+                        ["Location", userData?["address"]?.toString() ?? "N/A"],
                       ]),
 
                       const SizedBox(height: 16),
-
                       buildSectionTitle("Appointment Schedule"),
                       buildDetailTable([
                         [
@@ -538,8 +530,11 @@ class ReceiptPage extends StatelessWidget {
                           appointmentData["dueDateTime"]?.toDate().toString() ??
                               "",
                         ],
-                        ["Priority", appointmentData["priority"] ?? ""],
-                        ["Status", appointmentData["status"] ?? ""],
+                        [
+                          "Priority",
+                          appointmentData["priority"]?.toString() ?? "",
+                        ],
+                        ["Status", appointmentData["status"]?.toString() ?? ""],
                       ]),
 
                       const SizedBox(height: 16),
@@ -555,17 +550,9 @@ class ReceiptPage extends StatelessWidget {
                                   .collection('Users')
                                   .doc(appointmentData["tailorId"])
                                   .get()
-                            : null, // can just be null
+                            : null,
                         builder: (context, tailorSnapshot) {
                           String tailorShopName = "Pending";
-
-                          if (tailorSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-
                           if (tailorSnapshot.hasData &&
                               tailorSnapshot.data != null &&
                               tailorSnapshot.data!.exists) {
@@ -573,14 +560,15 @@ class ReceiptPage extends StatelessWidget {
                                 tailorSnapshot.data!.data()
                                     as Map<String, dynamic>;
                             tailorShopName =
-                                tailorData["shopName"] ?? "Unknown Shop";
+                                tailorData["shopName"]?.toString() ??
+                                "Unknown Shop";
                           }
-
                           return buildDetailTable([
                             ["Tailor Pick", tailorShopName],
                             [
                               "Tailor Assigned",
-                              appointmentData["tailorAssigned"] ?? "Pending",
+                              appointmentData["tailorAssigned"]?.toString() ??
+                                  "Pending",
                             ],
                             [
                               "Price",
@@ -589,7 +577,7 @@ class ReceiptPage extends StatelessWidget {
                                           .toString()
                                           .isEmpty)
                                   ? "Pending quotation"
-                                  : "PHP ${appointmentData["price"]}",
+                                  : "PHP ${appointmentData["price"].toString()}",
                             ],
                           ]);
                         },

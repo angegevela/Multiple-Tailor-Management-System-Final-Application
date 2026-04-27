@@ -36,7 +36,7 @@ class AuthGate extends StatelessWidget {
             final approved = data['approved'] ?? false;
 
             if (!approved) {
-              return const ApprovalPendingScreen();
+              return ApprovalPendingScreen(userId: uid);
             }
 
             // Approved users - Navigation Based on the role and user

@@ -58,19 +58,40 @@ class _CustomerChatFunctionState extends State<CustomerChatFunction> {
             );
           }
 
+          final seenTailors = <String>{};
+
+          final uniqueChats = chats.where((chat) {
+            final data = chat.data() as Map<String, dynamic>;
+
+            final participants = List<String>.from(data['participants'] ?? []);
+
+            if (participants.length < 2) return false;
+
+            final tailorId = participants.firstWhere(
+              (id) => id != widget.customerId,
+            );
+
+            if (seenTailors.contains(tailorId)) return false;
+
+            seenTailors.add(tailorId);
+            return true;
+          }).toList();
+
           return ListView.builder(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: chats.length,
+            itemCount: uniqueChats.length,
             itemBuilder: (context, index) {
-              final chat = chats[index];
+              final chat = uniqueChats[index];
               final data = chat.data() as Map<String, dynamic>;
 
-              final tailorId = (data['participants'] as List).firstWhere(
+              final participants = List<String>.from(data['participants']);
+              final tailorId = participants.firstWhere(
                 (id) => id != widget.customerId,
               );
 
               final lastMessage = data['lastMessage'] ?? "No messages yet";
+
               final updatedAt = data['updatedAt'] != null
                   ? (data['updatedAt'] as Timestamp).toDate()
                   : null;
@@ -127,6 +148,7 @@ class _CustomerChatFunctionState extends State<CustomerChatFunction> {
                                       as ImageProvider,
                           ),
                           const SizedBox(width: 14),
+
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,13 +167,14 @@ class _CustomerChatFunctionState extends State<CustomerChatFunction> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.russoOne(
-                                    color: Colors.grey[600],
+                                    color: Colors.grey,
                                     fontSize: 13,
                                   ),
                                 ),
                               ],
                             ),
                           ),
+
                           if (updatedAt != null)
                             Text(
                               _formatChatTime(updatedAt),

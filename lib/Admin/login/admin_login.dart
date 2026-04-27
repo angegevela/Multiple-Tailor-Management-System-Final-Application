@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:threadhub_system/Admin/login/tc_admin.dart';
 import 'package:threadhub_system/Admin/pages/sidebar/appointment.dart';
 import 'package:threadhub_system/Pages/forgot_pw_page1.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -15,15 +15,18 @@ class AdminLoginPage extends StatefulWidget {
 
 class _AdminLoginPageState extends State<AdminLoginPage> {
   final TextEditingController idController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+
   bool isLoading = false;
+  bool rememberMe = false;
+  bool _agreeToTerms = false;
 
   void _signInAdmin(BuildContext context) async {
     final enteredId = idController.text.trim();
-    final enteredPassword = passwordController.text.trim();
+    final enteredEmail = emailController.text.trim();
 
-    if (enteredId.isEmpty || enteredPassword.isEmpty) {
-      _showError("Please fill in all fields.");
+    if (enteredId.isEmpty || enteredEmail.isEmpty) {
+      _showError("Please enter Admin ID and Email.");
       return;
     }
 
@@ -33,29 +36,29 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('admins')
           .where('adminid', isEqualTo: enteredId)
+          .where('email', isEqualTo: enteredEmail)
           .limit(1)
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        _showError("Admin ID not found.");
+        _showError("Invalid Admin credentials.");
         return;
       }
 
-      final data = querySnapshot.docs.first.data();
-      final storedPassword = data['password'];
+      final prefs = await SharedPreferences.getInstance();
 
-      if (enteredPassword != storedPassword) {
-        _showError("Incorrect password.");
+      if (rememberMe) {
+        await prefs.setString('adminid', enteredId);
+        await prefs.setString('adminemail', enteredEmail);
       } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) {
-              return AdminAppointmentPage();
-            },
-          ),
-        );
+        await prefs.remove('adminid');
+        await prefs.remove('adminemail');
       }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => AdminAppointmentPage()),
+      );
     } catch (e) {
       _showError("An error occurred: $e");
     } finally {
@@ -72,16 +75,31 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   //Remember Me - Checklist
   final bool _rememberMe = false;
 
-  //Password hide - Icon/Transition
-  bool passwordVisible = false;
+  // //Password hide - Icon/Transition
+  // bool passwordVisible = false;
 
-  //Terms and Conditions - Checklist Logic
-  bool _agreeToTerms = false;
+  // //Terms and Conditions - Checklist Logic
+  // bool _agreeToTerms = false;
+
+  Future<void> _loadRememberedAdmin() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final savedId = prefs.getString('adminid');
+    final savedEmail = prefs.getString('adminemail');
+
+    if (savedId != null && savedEmail != null) {
+      idController.text = savedId;
+      emailController.text = savedEmail;
+      rememberMe = true;
+      setState(() {});
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    passwordVisible = false;
+    _loadRememberedAdmin();
+    // passwordVisible = false;
   }
 
   @override
@@ -178,7 +196,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                           const Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              "Password",
+                              "Email",
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.black45,
@@ -187,12 +205,11 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                           ),
                           const SizedBox(height: 10),
                           TextField(
-                            controller: passwordController,
-                            obscureText: !passwordVisible,
+                            controller: emailController,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.grey[200],
-                              labelText: 'Password',
+                              // labelText: 'Password',
                               border: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 18,
@@ -209,50 +226,55 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                 ),
                                 borderRadius: BorderRadius.circular(15),
                               ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  passwordVisible
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    passwordVisible = !passwordVisible;
-                                  });
-                                },
-                              ),
                             ),
                           ),
 
                           const SizedBox(height: 30),
-                          //Forgot Password
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              const SizedBox(width: 45),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) {
-                                        return ForgotPasswordbutton();
-                                      },
-                                    ),
-                                  );
+                              Checkbox(
+                                value: rememberMe,
+                                onChanged: (value) {
+                                  setState(() {
+                                    rememberMe = value ?? false;
+                                  });
                                 },
-                                child: const Text(
-                                  'Forgot Password?',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black,
-                                  ),
+                              ),
+                              const Text(
+                                "Remember Me",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
                                 ),
                               ),
                             ],
                           ),
-
+                          // //Forgot Password
+                          // Row(
+                          //   mainAxisAlignment: MainAxisAlignment.end,
+                          //   children: [
+                          //     const SizedBox(width: 45),
+                          //     GestureDetector(
+                          //       onTap: () {
+                          //         Navigator.push(
+                          //           context,
+                          //           MaterialPageRoute(
+                          //             builder: (context) {
+                          //               return ForgotPasswordbutton();
+                          //             },
+                          //           ),
+                          //         );
+                          //       },
+                          //       child: const Text(
+                          //         'Forgot Password?',
+                          //         style: TextStyle(
+                          //           fontSize: 12,
+                          //           color: Colors.black,
+                          //         ),
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
                           const SizedBox(height: 30),
 
                           //Sign In Button

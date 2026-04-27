@@ -84,6 +84,42 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:164446608697:android:4658b86eca577991ca9ce8",
+        "android_client_info": {
+          "package_name": "com.threadhub.admin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "164446608697-soolilbqkuff1300glpacdgpcspvbs03.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKI006cGFuRyIx1R7fZwPlWTethI7Wo1k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "164446608697-soolilbqkuff1300glpacdgpcspvbs03.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "164446608697-amki2ja8n4spctg998ii74feic51bg37.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.threadhub"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

@@ -66,7 +66,7 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
       final data = doc.data();
       final settings = data?['notificationSettings'] ?? {};
       setState(() {
-        shopName = "${data?['shopName']}";
+        shopName = data?['shopName'] ?? "No shop name";
         role = data?['role'] ?? "No role";
         // Notification Push Buttons
         pushNotifications = settings['pushNotifications'] ?? true;
@@ -265,7 +265,7 @@ class _TailorProfileSettingsPageState extends State<TailorProfileSettingsPage> {
               ),
             ),
 
-            // DARK MODE - Commenting this out 
+            // DARK MODE - Commenting this out
             // Container(
             //   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             //   decoration: _boxDecoration(),

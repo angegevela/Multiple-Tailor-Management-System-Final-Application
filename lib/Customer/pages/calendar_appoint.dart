@@ -249,7 +249,7 @@ class _CalendarHomeState extends State<CalendarHome> {
                       fontWeight: FontWeight.w600,
                     ),
                     showOnlyCurrentMonthDate: false,
-                    height: 330,
+                    height: MediaQuery.of(context).size.width * 0.9,
                     selectedDateTime: _currentDate,
                     targetDateTime: _targetDateTime,
                     customGridViewPhysics: NeverScrollableScrollPhysics(),

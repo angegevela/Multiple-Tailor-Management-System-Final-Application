@@ -28,7 +28,7 @@ class ProductStatusPage extends StatefulWidget {
 
 class _ProductStatusPageState extends State<ProductStatusPage> {
   bool isLoading = true;
-  int currentPage = 0;
+  List<int> currentPage = [0, 0, 0, 0, 0];
   int sectionPageIndex = 0;
   final int rowsPerPage = 7;
   String searchQuery = "";
@@ -111,7 +111,6 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
       List<Map<String, dynamic>> orderReceivedData = [];
 
       for (var doc in filteredDocs) {
-        
         // Section 1: Service Type & Status
         serviceTypeStatus.add({
           'Service Type': doc['services'] ?? '',
@@ -181,6 +180,9 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
           receiptReport,
           orderReceivedData,
         ];
+        for (int i = 0; i < sectionData.length; i++) {
+          _stickCurrentPage(i);
+        }
         isLoading = false;
       });
     } catch (e) {
@@ -207,44 +209,32 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
             'Do you want to mark this order as received?',
             style: GoogleFonts.poltawskiNowy(fontSize: 16),
           ),
-          actionsAlignment: MainAxisAlignment.spaceBetween,
           actions: [
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF335E7A),
               ),
               onPressed: () => Navigator.pop(context, true),
-              child: Text(
-                'Yes',
-                style: GoogleFonts.poltawskiNowy(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Text('Yes'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFDB373A),
               ),
               onPressed: () => Navigator.pop(context, false),
-              child: Text(
-                'No',
-                style: GoogleFonts.poltawskiNowy(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Text('No'),
             ),
           ],
         ),
       );
 
-      if (confirm != true) return;
-
       await FirebaseFirestore.instance
           .collection('Appointment Forms')
           .doc(appointmentId)
-          .update({'orderReceived': true});
+          .update({
+            'orderReceived': true,
+            'reviewSubmitted': false, // IMPORTANT for product status UI
+          });
 
       if (!mounted) return;
 
@@ -281,6 +271,7 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
       );
 
       if (!mounted) return;
+
       if (writeReview == true) {
         final appointmentDoc = await FirebaseFirestore.instance
             .collection('Appointment Forms')
@@ -290,6 +281,7 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
         if (!appointmentDoc.exists) return;
 
         final tailorId = appointmentDoc.data()?['tailorId'] ?? '';
+
         final tailorDoc = await FirebaseFirestore.instance
             .collection('Users')
             .doc(tailorId)
@@ -299,7 +291,7 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
 
         final tailorData = tailorDoc.data()!;
 
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => RatingandReviewPage(
@@ -310,7 +302,7 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
               tailorEmail: tailorData['email'] ?? '',
               tailorImage: tailorData['profileImageUrl'] ?? '',
               tailorShop: tailorData['shopName'] ?? '',
-              availability: tailorData['availability'] ?? {},
+              availability: tailorData['availability'] ?? '',
               expertise: tailorData['servicesOffered'] ?? [],
               status: tailorData['isAvailable'] == true
                   ? 'Available'
@@ -324,12 +316,15 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
       await _loadData();
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Order marked as received.')),
       );
     } catch (e) {
-      print('Error marking order as received: $e');
+      debugPrint('Error marking order as received: $e');
+
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to mark order as received.')),
       );
@@ -357,6 +352,16 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
     });
 
     return newChat.id;
+  }
+
+  void _stickCurrentPage(int section) {
+    final maxPages = (sectionData[section].length / rowsPerPage).ceil();
+
+    if (maxPages == 0) {
+      currentPage[section] = 0;
+    } else if (currentPage[section] >= maxPages) {
+      currentPage[section] = maxPages - 1;
+    }
   }
 
   @override
@@ -390,10 +395,15 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
     }).toList();
 
     final totalPages = (filteredData.length / rowsPerPage).ceil();
-    final start = currentPage * rowsPerPage;
-    final end = (start + rowsPerPage).clamp(0, filteredData.length);
-    final pagedData = filteredData.sublist(start, end);
+    final start = currentPage[sectionPageIndex] * rowsPerPage;
 
+    final end = (start + rowsPerPage > filteredData.length)
+        ? filteredData.length
+        : start + rowsPerPage;
+
+    final pagedData = (start < filteredData.length)
+        ? filteredData.sublist(start, end)
+        : [];
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF6082B6),
@@ -470,8 +480,8 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
               if (result != null) {
                 setState(() {
                   activeFilter = result;
-                  currentPage = 0;
                   isLoading = true;
+                  currentPage[sectionPageIndex] = 0;
                 });
                 await _loadData();
               }
@@ -502,7 +512,6 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
               ),
               onChanged: (value) => setState(() {
                 searchQuery = value;
-                currentPage = 0;
               }),
             ),
           ),
@@ -734,7 +743,13 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
               _pageNavIcon(Icons.arrow_back_ios, sectionPageIndex > 0, () {
                 setState(() {
                   sectionPageIndex--;
-                  currentPage = 0;
+
+                  final maxPage =
+                      (sectionData[sectionPageIndex].length / rowsPerPage)
+                          .ceil();
+                  if (currentPage[sectionPageIndex] >= maxPage) {
+                    currentPage[sectionPageIndex] = 0;
+                  }
                 });
               }),
               const SizedBox(width: 5),
@@ -743,8 +758,8 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
                 sectionPageIndex < sectionHeaders.length - 1,
                 () {
                   setState(() {
+                    _stickCurrentPage(sectionPageIndex);
                     sectionPageIndex++;
-                    currentPage = 0;
                   });
                 },
               ),
@@ -816,13 +831,17 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(totalPages, (index) {
           return GestureDetector(
-            onTap: () => setState(() => currentPage = index),
+            onTap: () {
+              setState(() {
+                currentPage[sectionPageIndex] = index;
+              });
+            },
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: currentPage == index
+                color: currentPage[sectionPageIndex] == index
                     ? Colors.blueGrey
                     : Colors.grey[300],
                 shape: BoxShape.circle,
@@ -974,7 +993,7 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
             if (!docSnapshot.exists) return;
 
             final data = docSnapshot.data()!;
-            final price = data['price'];
+            String price = data['price']?.toString() ?? '';
             final tailorAssigned = data['tailorAssigned']?.toString() ?? '';
 
             if (price == null ||
@@ -995,7 +1014,8 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ReceiptPage(appointmentId: appointmentId),
+                builder: (context) =>
+                    ReceiptPage_ProductStatus(appointmentId: appointmentId),
               ),
             );
           } catch (e) {
@@ -1115,11 +1135,7 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
 
     if (header == 'Order Received') {
       final received = row['orderReceived'] ?? false;
-      final status = row['status'] ?? '';
 
-      if (status != 'Completed') {
-        return Text('-', style: TextStyle(color: Colors.grey));
-      }
       return Text(
         received ? 'Received' : 'Pending',
         style: TextStyle(
@@ -1128,103 +1144,140 @@ class _ProductStatusPageState extends State<ProductStatusPage> {
         ),
       );
     }
+    // if (header == 'Order Received') {
+    //   final received = row['orderReceived'] ?? false;
+    //   final status = row['status'] ?? '';
+
+    //   if (status != 'Completed') {
+    //     return Text('-', style: TextStyle(color: Colors.grey));
+    //   }
+    //   return Text(
+    //     received ? 'Received' : 'Pending',
+    //     style: TextStyle(
+    //       fontWeight: FontWeight.bold,
+    //       color: received ? Colors.green : Colors.orange,
+    //     ),
+    //   );
+    // }
 
     if (header == 'Review') {
       final received = row['orderReceived'] ?? false;
-      final reviewSubmitted = row['reviewSubmitted'] ?? false;
-      final appointmentId = row['Order Received'] ?? '';
+      final appointmentId = row['appointmentId'] ?? ''; // ⚠ fix this key
       final tailorId = row['tailorId'] ?? '';
+      final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
       if (!received) return const SizedBox();
 
-      if (reviewSubmitted) {
-        return Text(
-          'Reviewed',
-          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-        );
-      }
-
-      return GestureDetector(
-        onTap: () async {
-          if (tailorId.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Tailor not assigned yet.')),
+      return FutureBuilder<QuerySnapshot>(
+        future: FirebaseFirestore.instance
+            .collection('Users')
+            .doc(tailorId)
+            .collection('Reviews')
+            .where('userId', isEqualTo: currentUserId)
+            .where('appointmentId', isEqualTo: appointmentId)
+            .get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
             );
-            return;
           }
 
-          try {
-            final tailorDoc = await FirebaseFirestore.instance
-                .collection('Users')
-                .doc(tailorId)
-                .get();
+          final hasReviewed = snapshot.data!.docs.isNotEmpty;
 
-            if (!tailorDoc.exists) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tailor data not found.')),
-              );
-              return;
-            }
+          if (hasReviewed) {
+            return const Text(
+              'Reviewed',
+              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+            );
+          }
 
-            final data = tailorDoc.data()!;
+          return GestureDetector(
+            onTap: () async {
+              if (tailorId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tailor not assigned yet.')),
+                );
+                return;
+              }
 
-            final availabilityMap =
-                data['availability'] as Map<String, dynamic>? ?? {};
-            final servicesList =
-                availabilityMap['servicesOffered'] as List<dynamic>? ?? [];
-            final expertiseString = servicesList.isNotEmpty
-                ? servicesList.join(', ')
-                : 'Not specified';
+              try {
+                final tailorDoc = await FirebaseFirestore.instance
+                    .collection('Users')
+                    .doc(tailorId)
+                    .get();
 
-            final availabilityData = data['availability'] ?? {};
-            final days = (availabilityData['days'] ?? []).join(', ');
-            final timeSlot = availabilityData['timeSlot'] ?? '';
-            final availabilityString = (days.isNotEmpty || timeSlot.isNotEmpty)
-                ? "$days | $timeSlot"
-                : 'Not specified';
+                if (!tailorDoc.exists) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Tailor data not found.')),
+                  );
+                  return;
+                }
 
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => RatingandReviewPage(
-                  appointmentId: appointmentId,
-                  tailorId: tailorId,
-                  tailorName: data['shopName'] ?? 'Unknown Tailor',
-                  tailorPhone: data['businessNumber'] ?? 'N/A',
-                  tailorEmail: data['email'] ?? 'N/A',
-                  tailorImage: data['profileImageUrl'] ?? '',
-                  tailorShop: data['shopName'] ?? 'N/A',
-                  availability: availabilityString,
-                  expertise: expertiseString,
-                  status: data['isAvailable'] == true
-                      ? 'Available'
-                      : 'Unavailable',
-                  location: data['fullAddress'] ?? 'N/A',
-                ),
+                final data = tailorDoc.data()!;
+
+                final availabilityMap =
+                    data['availability'] as Map<String, dynamic>? ?? {};
+                final servicesList =
+                    availabilityMap['servicesOffered'] as List<dynamic>? ?? [];
+                final expertiseString = servicesList.isNotEmpty
+                    ? servicesList.join(', ')
+                    : 'Not specified';
+
+                final availabilityData = data['availability'] ?? {};
+                final days = (availabilityData['days'] ?? []).join(', ');
+                final timeSlot = availabilityData['timeSlot'] ?? '';
+                final availabilityString =
+                    (days.isNotEmpty || timeSlot.isNotEmpty)
+                    ? "$days | $timeSlot"
+                    : 'Not specified';
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RatingandReviewPage(
+                      appointmentId: appointmentId,
+                      tailorId: tailorId,
+                      tailorName: data['shopName'] ?? 'Unknown Tailor',
+                      tailorPhone: data['businessNumber'] ?? 'N/A',
+                      tailorEmail: data['email'] ?? 'N/A',
+                      tailorImage: data['profileImageUrl'] ?? '',
+                      tailorShop: data['shopName'] ?? 'N/A',
+                      availability: availabilityString,
+                      expertise: expertiseString,
+                      status: data['isAvailable'] == true
+                          ? 'Available'
+                          : 'Unavailable',
+                      location: data['fullAddress'] ?? 'N/A',
+                    ),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to open review page.')),
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue),
               ),
-            );
-          } catch (e) {
-            print('Error opening review page: $e');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to open review page.')),
-              );
-            }
-          }
+              child: const Text(
+                'Write Review',
+                style: TextStyle(color: Colors.blue),
+              ),
+            ),
+          );
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue),
-          ),
-          child: Text('Write Review', style: TextStyle(color: Colors.blue)),
-        ),
       );
     }
     return Text(
-      value?.toString() ?? '',
+      value?.toString() ?? '-',
       style: TextStyle(fontSize: fontSize),
       textAlign: TextAlign.left,
     );

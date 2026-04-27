@@ -446,6 +446,11 @@ class _TailorAvailabilitySettingsState
   @override
   Widget build(BuildContext context) {
     final tailorfontSize = context.watch<TailorFontprovider>().fontSize;
+
+    final isValid =
+        _selectedDays.isNotEmpty &&
+        !_hasMissingTimes() &&
+        _numberofCustomerController.text.isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF262633),
@@ -934,10 +939,7 @@ class _TailorAvailabilitySettingsState
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed:
-                _selectedDays.isEmpty &&
-                    !_hasMissingTimes() &&
-                    _numberofCustomerController.text.isEmpty
+            onPressed: isValid
                 ? () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) return;

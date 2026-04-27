@@ -34,7 +34,7 @@ class _SignupRegisterState extends State<SignupRegister> {
   @override
   void initState() {
     super.initState();
-    
+
     if (widget.email != null) {
       _emailController.text = widget.email!;
     }
@@ -336,6 +336,8 @@ class _SignupRegisterState extends State<SignupRegister> {
 
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
+          String uid = user.uid;
+
           String fullAddress =
               "${_addressController.text.trim()}, $selectedBarangay, Puerto Princesa City, 5300, Philippines";
 
@@ -344,7 +346,7 @@ class _SignupRegisterState extends State<SignupRegister> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => const ApprovalPendingScreen(),
+              builder: (context) => ApprovalPendingScreen(userId: uid),
             ),
           );
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -42,8 +43,6 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   // Display Selected Appointment Date in Form
   DateTime? appointmentDateTime;
   String? priority;
-
-  // Display Selected Due Date in Form
   DateTime? dueDateTime;
   String? duepriority;
 
@@ -73,20 +72,53 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
   String _selectedService = '';
   final GlobalKey _serviceDropdownKey = GlobalKey();
   bool _isOtherSelected = false;
-  TextEditingController _otherServiceController = TextEditingController();
+  late TextEditingController _otherServiceController;
 
   // Manual Measurement - Passing Data
   String? _measurementType;
   String? _measurementTypeFromManual;
 
-  // Adding automation of customer profile data
+  // Customer profile data
   Map<String, dynamic>? _customerProfile;
   bool _isloadingProfile = false;
   bool _showNamePhoneFields = true;
 
+  bool _isRestoringDraft = false;
+  Timer? _saveDraftTimer;
+  final List<FocusNode> _textFieldFocusNodes = [];
+
+  // Textfield Controllers - DECLARE BEFORE initState
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _phonenumberController;
+  late final TextEditingController _garmentSpecController;
+  late final TextEditingController _servicesController;
+  late final TextEditingController _messageController;
+  late final TextEditingController _quantityController;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize controllers
+    _fullNameController = TextEditingController();
+    _phonenumberController = TextEditingController();
+    _garmentSpecController = TextEditingController();
+    _servicesController = TextEditingController();
+    _messageController = TextEditingController();
+    _quantityController = TextEditingController();
+    _otherServiceController = TextEditingController();
+
+    // Initialize focus nodes for all text fields - this will disregard the textfield onced the user is finished typing
+    _textFieldFocusNodes.addAll([
+      FocusNode(), // fullName
+      FocusNode(), // phone
+      FocusNode(), // garment
+      FocusNode(), // services
+      FocusNode(), // message
+      FocusNode(), // quantity
+      FocusNode(), // other service
+    ]);
+
     _receivedMeasurements = widget.measurements;
     _measurementType = widget.measurementType;
 
@@ -97,13 +129,25 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     }
   }
 
+  void _onTextFieldChanged() {
+    if (!_isRestoringDraft) {
+      _saveDraftDebounced();
+    }
+  }
+
+  void _saveDraftDebounced() {
+    _saveDraftTimer?.cancel();
+    _saveDraftTimer = Timer(const Duration(milliseconds: 500), () {
+      _saveDraft();
+    });
+  }
+
   // Loading customer from Firebase-Firestore
   Future<void> _loadCustomerProfile() async {
     setState(() => _isloadingProfile = true);
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-
       if (user != null) {
         final doc = await FirebaseFirestore.instance
             .collection('Users')
@@ -112,17 +156,14 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
 
         if (doc.exists) {
           final data = doc.data()!;
-
           setState(() {
             _customerProfile = data;
-
             final fullName =
                 "${data['firstName'] ?? ''} ${data['surname'] ?? ''}".trim();
 
             if (fullName.isNotEmpty && _fullNameController.text.isEmpty) {
               _fullNameController.text = fullName;
             }
-
             if (data['phoneNumber'] != null &&
                 _phonenumberController.text.isEmpty) {
               _phonenumberController.text = data['phoneNumber'].toString();
@@ -166,10 +207,8 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     }
   }
 
-  // Intact the data within the application whenever the user is leaving unless remove
   Map<String, dynamic> _getFormData() {
     return {
-      //Personal Information Data
       "fullName": _fullNameController.text,
       "phone": _phonenumberController.text,
       "garment": _garmentSpecController.text,
@@ -177,40 +216,40 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
       "quantity": _quantityController.text,
       "message": _messageController.text,
       "selectedService": _selectedService,
-
-      //Appointment Datas
       "appointmentDateTime": appointmentDateTime?.toIso8601String(),
       "dueDateTime": dueDateTime?.toIso8601String(),
       "priority": priority,
       "duepriority": duepriority,
-
-      //Customization Datas
       "customizationDescription": _customizationDescription,
       "uploadedImages": _uploadedImages,
-
-      //Measurment Datas
       "measurementType": _selectedType?.toString(),
       "manualMeasurements": _receivedMeasurements,
       "manualMeasurementType": _measurementTypeFromManual,
     };
   }
 
-  //Safe Draft
   Future<void> _saveDraft() async {
     final preferences = await SharedPreferences.getInstance();
-
     final data = _getFormData();
     final jsonString = jsonEncode(data);
-
     await preferences.setString('appointment_draft', jsonString);
   }
 
-  //Re-load everything from datas
   Future<void> _loadDraft() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString('appointment_draft');
 
     if (jsonString == null) return;
+
+    _isRestoringDraft = true;
+
+    // Remove listeners temporarily
+    _fullNameController.removeListener(_onTextFieldChanged);
+    _phonenumberController.removeListener(_onTextFieldChanged);
+    _garmentSpecController.removeListener(_onTextFieldChanged);
+    _servicesController.removeListener(_onTextFieldChanged);
+    _quantityController.removeListener(_onTextFieldChanged);
+    _messageController.removeListener(_onTextFieldChanged);
 
     final data = jsonDecode(jsonString);
 
@@ -219,23 +258,18 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
       _phonenumberController.text = data["phone"] ?? '';
       _garmentSpecController.text = data["garment"] ?? '';
       _messageController.text = data["message"] ?? '';
-
       _selectedService = data["selectedService"] ?? '';
 
       if (data["appointmentDateTime"] != null) {
         appointmentDateTime = DateTime.parse(data["appointmentDateTime"]);
       }
-
       if (data["dueDateTime"] != null) {
         dueDateTime = DateTime.parse(data["dueDateTime"]);
       }
-
       priority = data["priority"];
       duepriority = data["duepriority"];
-
       _customizationDescription = data["customizationDescription"];
       _uploadedImages = List<String>.from(data["uploadedImages"] ?? []);
-
       _measurementTypeFromManual = data["manualMeasurementType"];
 
       if (data["measurementType"] != null) {
@@ -252,26 +286,197 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
         ),
       );
     });
+
+    // Re-add listeners after frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fullNameController.addListener(_onTextFieldChanged);
+      _phonenumberController.addListener(_onTextFieldChanged);
+      _garmentSpecController.addListener(_onTextFieldChanged);
+      _servicesController.addListener(_onTextFieldChanged);
+      _quantityController.addListener(_onTextFieldChanged);
+      _messageController.addListener(_onTextFieldChanged);
+      _isRestoringDraft = false;
+    });
   }
 
-  // Textfield Controllers
-  final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _phonenumberController = TextEditingController();
-  final TextEditingController _garmentSpecController = TextEditingController();
-  final TextEditingController _servicesController = TextEditingController();
-  final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController();
+  void _showServiceBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 10),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Title
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Service',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Search Field
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search services...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                  onChanged: (query) {
+                    // Filter logic can be added here if needed
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Services List - FAST & SMOOTH
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: _servicesoffered.length,
+                  itemBuilder: (context, index) {
+                    final service = _servicesoffered[index];
+                    final isSelected = _selectedService == service;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF628141)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF628141)
+                              : Colors.grey.shade300,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        title: Text(
+                          service,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check, color: Colors.white)
+                            : null,
+                        onTap: () {
+                          _hideKeyboard();
+                          setState(() {
+                            _selectedService = service;
+                            _servicesController.text = service;
+                            _isOtherSelected = service == "Others";
+                          });
+                          Navigator.pop(context);
+                          _saveDraft(); // Auto-save
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
+    _saveDraftTimer?.cancel();
+
+    // Dispose focus nodes
+    for (var focusNode in _textFieldFocusNodes) {
+      focusNode.dispose();
+    }
+
+    // Remove listeners before dispose
+    _fullNameController.removeListener(_onTextFieldChanged);
+    _phonenumberController.removeListener(_onTextFieldChanged);
+    _garmentSpecController.removeListener(_onTextFieldChanged);
+    _servicesController.removeListener(_onTextFieldChanged);
+    _quantityController.removeListener(_onTextFieldChanged);
+    _messageController.removeListener(_onTextFieldChanged);
+
+    // Dispose controllers
     _fullNameController.dispose();
     _phonenumberController.dispose();
     _garmentSpecController.dispose();
     _servicesController.dispose();
     _messageController.dispose();
     _quantityController.dispose();
+    _otherServiceController.dispose();
 
     super.dispose();
+  }
+
+  void _hideKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    for (var node in _textFieldFocusNodes) {
+      if (node.hasFocus) {
+        node.unfocus();
+      }
+    }
   }
 
   // Firebase + Supabase Integration
@@ -356,7 +561,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
 
   Map<String, Map<String, String>> _receivedMeasurements = {};
   bool _isloading = false;
-
+  final FocusNode _quantityFocus = FocusNode();
   // Notice for first backout on arrow button
   Future<bool> _handleBackPressed() async {
     final prefs = await SharedPreferences.getInstance();
@@ -434,6 +639,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
     }
   }
 
+  late ValueNotifier<String> _serviceNotifier;
   @override
   Widget build(BuildContext context) {
     final fontSize = context.watch<FontProvider>().fontSize;
@@ -551,6 +757,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                       if (_showNamePhoneFields)
                         TextField(
                           controller: _fullNameController,
+                          focusNode: _textFieldFocusNodes[0],
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: Colors.white,
@@ -671,6 +878,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         ),
                       TextField(
                         controller: _phonenumberController,
+                        focusNode: _textFieldFocusNodes[1],
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
@@ -713,6 +921,9 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: _garmentSpecController,
+                        focusNode: _textFieldFocusNodes[2],
+                        onTapOutside: (_) => _hideKeyboard(),
+                        onSubmitted: (_) => _hideKeyboard(),
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
@@ -754,7 +965,10 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: _quantityController,
+                        focusNode: _textFieldFocusNodes[5],
                         keyboardType: TextInputType.number,
+                        onTapOutside: (_) => _hideKeyboard(),
+                        onSubmitted: (_) => _hideKeyboard(),
                         decoration: InputDecoration(
                           hintText: "Enter quantity",
                           filled: true,
@@ -801,9 +1015,12 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      MiraiDropDownMenu<String>(
+
+                      GestureDetector(
+                        onTap: () {
+                          _showServiceBottomSheet(context);
+                        },
                         child: Container(
-                          key: _serviceDropdownKey,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 18,
@@ -812,79 +1029,64 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(15),
                             border: Border.all(color: Colors.black, width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                _selectedService.isEmpty
-                                    ? 'Select a Service'
-                                    : _selectedService,
-                                style: TextStyle(
-                                  fontSize: fontSize,
-                                  color: Colors.black87,
+                              Expanded(
+                                child: Text(
+                                  _selectedService.isEmpty
+                                      ? 'Select a Service'
+                                      : _selectedService,
+                                  style: TextStyle(
+                                    fontSize: fontSize,
+                                    color: _selectedService.isEmpty
+                                        ? Colors.grey
+                                        : Colors.black87,
+                                  ),
                                 ),
                               ),
-                              const Icon(Icons.arrow_drop_down),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                color: Colors.black54,
+                              ),
                             ],
                           ),
                         ),
-                        children: _servicesoffered,
-                        valueNotifier: ValueNotifier<String>(_selectedService),
-
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedService = value;
-                            _servicesController.text = value;
-                            _isOtherSelected = value == "Others";
-                          });
-                        },
-                        radius: 15,
-                        maxHeight: 300,
-                        showSearchTextField: true,
-                        selectedItemBackgroundColor: Color(0xFF628141),
-                        itemWidgetBuilder:
-                            (index, item, {isItemSelected = false}) {
-                              final String displayText = item ?? '';
-                              return Container(
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 14,
-                                ),
-                                color: isItemSelected
-                                    ? Color(0xFF628141)
-                                    : Colors.transparent,
-                                child: Text(
-                                  displayText,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: fontSize,
-                                    color: isItemSelected
-                                        ? Colors.white
-                                        : Colors.black,
-                                    fontWeight: isItemSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              );
-                            },
                       ),
+
                       if (_isOtherSelected)
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: TextField(
                             controller: _otherServiceController,
+                            focusNode: _textFieldFocusNodes[6],
                             textAlign: TextAlign.center,
                             decoration: InputDecoration(
-                              labelText: 'Enter your service',
+                              labelText: 'Enter your custom service',
+                              filled: true,
+                              fillColor: Colors.white,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             onChanged: (val) {
                               _servicesController.text = val;
+                              _selectedService = val;
+                              _onTextFieldChanged();
+                              Future.delayed(
+                                const Duration(milliseconds: 100),
+                                () {
+                                  if (mounted) _hideKeyboard();
+                                },
+                              );
                             },
                           ),
                         ),
@@ -920,15 +1122,15 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         ),
                         child: Row(
                           children: [
-                            Text(
-                              "More Options",
-                              textAlign: TextAlign.left,
-                              style: TextStyle(
-                                fontSize: fontSize,
-                                color: Colors.black,
+                            Expanded(
+                              child: Text(
+                                "More Options",
+                                style: TextStyle(
+                                  fontSize: fontSize,
+                                  color: Colors.black,
+                                ),
                               ),
                             ),
-                            SizedBox(width: 145),
                             IconButton(
                               icon: const Icon(
                                 Icons.arrow_right_alt,
@@ -936,6 +1138,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                 size: 25,
                               ),
                               onPressed: () async {
+                                _hideKeyboard();
                                 final customizationData = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -953,6 +1156,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                   });
                                 }
                               },
+
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -1041,6 +1245,9 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                         padding: EdgeInsets.all(8),
                         child: TextField(
                           controller: _messageController,
+                          focusNode: _textFieldFocusNodes[4],
+                          onTapOutside: (_) => _hideKeyboard(),
+                          onSubmitted: (_) => _hideKeyboard(),
                           decoration: InputDecoration(
                             hintText: 'Enter any additional messages here',
                             border: InputBorder.none,
@@ -1105,6 +1312,9 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                             Expanded(
                                               child: ElevatedButton(
                                                 onPressed: () async {
+                                                  FocusScope.of(
+                                                    context,
+                                                  ).unfocus();
                                                   Navigator.of(context).pop();
                                                   final result =
                                                       await Navigator.push(
@@ -1114,6 +1324,7 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                                               CalendarHome(),
                                                         ),
                                                       );
+
                                                   if (result != null &&
                                                       result
                                                           is Map<
@@ -1147,6 +1358,10 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                                       priority =
                                                           result['priority'];
                                                     });
+
+                                                    FocusScope.of(
+                                                      context,
+                                                    ).unfocus();
                                                   }
                                                 },
                                                 style: ElevatedButton.styleFrom(
@@ -1173,6 +1388,9 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                             Expanded(
                                               child: ElevatedButton(
                                                 onPressed: () async {
+                                                  FocusScope.of(
+                                                    context,
+                                                  ).unfocus();
                                                   Navigator.of(context).pop();
                                                   final result =
                                                       await Navigator.push(
@@ -1194,6 +1412,9 @@ class _AppointmentFormPageState extends State<AppointmentFormPage> {
                                                       duepriority =
                                                           result['duepriority'];
                                                     });
+                                                    FocusScope.of(
+                                                      context,
+                                                    ).unfocus();
                                                   }
                                                 },
 

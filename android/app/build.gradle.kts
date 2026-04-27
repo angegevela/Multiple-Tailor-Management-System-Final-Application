@@ -21,6 +21,24 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+  android {
+
+    flavorDimensions += "appType"
+
+    productFlavors {
+
+        create("admin") {
+            dimension = "appType"
+            resValue("string", "app_name", "Admin")
+        }
+
+        create("user") {
+            dimension = "appType"
+            resValue("string", "app_name", "Tailor Customer")
+        }
+    }
+}
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.threadhub_system"
@@ -47,7 +65,7 @@ flutter {
 
 
 dependencies {
-  implementation(platform("com.google.firebase:firebase-bom:34.3.0"))
+  implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
   implementation("androidx.appcompat:appcompat:1.4.0")
   coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

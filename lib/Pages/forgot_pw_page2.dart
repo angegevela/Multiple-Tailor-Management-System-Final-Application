@@ -36,7 +36,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             Padding(
               padding: const EdgeInsets.all(3.0),
               child: Text(
-                'Please enter your email to reset your password, use the email you use to sign up your account on this application',
+                "Forgot your password? No problem. Enter the email you used to sign up, and we'll help you get back into your account",
                 style: GoogleFonts.inter(
                   color: Colors.grey[700],
                   fontWeight: FontWeight.w500,
@@ -130,7 +130,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
           ),
           content: Text(
-            'Please check your email to reset your password.',
+            "A password reset link has been sent to your email. If you don't see it in your inbox, please check your spam folder.",
             style: GoogleFonts.playfairDisplay(
               fontWeight: FontWeight.bold,
               fontSize: 14,

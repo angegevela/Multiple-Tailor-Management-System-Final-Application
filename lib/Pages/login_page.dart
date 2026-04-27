@@ -6,8 +6,10 @@ import 'package:threadhub_system/Customer/signup/customer_homepage.dart';
 import 'package:threadhub_system/Customer/signup/welcoming_signup.dart';
 import 'package:threadhub_system/Pages/approval_screen(signup).dart';
 import 'package:threadhub_system/Pages/forgot_pw_page1.dart';
+import 'package:threadhub_system/Pages/forgot_pw_page2.dart';
 import 'package:threadhub_system/Tailor/pages/menu%20item/tailor_availabilitysettings.dart';
 import 'package:threadhub_system/Tailor/pages/tailorhomepage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   final VoidCallback showRegisterPage;
@@ -24,185 +26,209 @@ class _LoginPageState extends State<LoginPage> {
 
   //Remember Me
   bool _rememberMe = false;
-void signUserIn() async {
-  String identifier = emailController.text.trim();
-  String password = passwordController.text.trim();
 
-  // Prevent empty input BEFORE Firebase
-  if (identifier.isEmpty || password.isEmpty) {
-    NoInput();
-    return;
-  }
+  void signUserIn() async {
+    String identifier = emailController.text.trim();
+    String password = passwordController.text.trim();
 
-  // Show loading circle
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(child: CircularProgressIndicator()),
-  );
+    // Prevent empty input BEFORE Firebase
+    if (identifier.isEmpty || password.isEmpty) {
+      NoInput();
+      return;
+    }
 
-  try {
-    String email = identifier;
+    // Show loading circle
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
-    // Checking if user typed username instead of email
-    if (!identifier.contains('@')) {
-      final snapshot = await FirebaseFirestore.instance
+    try {
+      String email = identifier;
+
+      // Checking if user typed username instead of email
+      if (!identifier.contains('@')) {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .where('username', isEqualTo: identifier)
+            .limit(1)
+            .get();
+
+        if (snapshot.docs.isEmpty) {
+          Navigator.pop(context);
+          wrongEmailMessage();
+          return;
+        }
+
+        email = snapshot.docs.first['email'];
+      }
+
+      // Attempt login with resolved email if the username is not possible
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      String uid = userCredential.user!.uid;
+
+      // Fetching from  user document in firebase
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('Users')
-          .where('username', isEqualTo: identifier)
-          .limit(1)
+          .doc(uid)
           .get();
 
-      if (snapshot.docs.isEmpty) {
+      if (!userDoc.exists) {
         Navigator.pop(context);
         wrongEmailMessage();
         return;
       }
 
-      email = snapshot.docs.first['email'];
-    }
+      final data = userDoc.data() as Map<String, dynamic>;
 
-    // Attempt login with resolved email if the username is not possible
-    UserCredential userCredential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: password);
+      // Reading the role
+      String role = data['role'] ?? '';
+      String status = data['accountStatus'] ?? 'pending';
 
-    String uid = userCredential.user!.uid;
-
-    // Fetching from  user document in firebase
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('Users')
-        .doc(uid)
-        .get();
-
-    if (!userDoc.exists) {
       Navigator.pop(context);
-      wrongEmailMessage();
-      return;
-    }
 
-    final data = userDoc.data() as Map<String, dynamic>;
-
-    // Reading the role
-    String role = data['role'] ?? '';
-
-    Navigator.pop(context);
-
-    // New Customer Flow
-    if (role == 'Customer') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => CustomerHomePage()),
-      );
-    }
-
-    // New Tailor Flow
-    else if (role == 'Tailor') {
-      bool isApproved = data['isApproved'] ?? false;
-
-      Map availability = data['availability'] ?? {};
-      List days = availability['days'] ?? [];
-
-      bool hasAvailabilityFlag = data['hasAvailability'] ?? false;
-      bool hasAvailability = hasAvailabilityFlag && days.isNotEmpty;
-
-      // This navigation will navigate to the approcal pending screen if the user is not yet approved by administrator
-      if (!isApproved) {
+      if (status == 'pending') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ApprovalPendingScreen()),
+          MaterialPageRoute(builder: (_) => ApprovalPendingScreen(userId: uid)),
         );
+        return;
       }
 
-      // Elif condition if the approved tailor are directed to the availability setting to avoid confusion
-      else if (!hasAvailability) {
-        Navigator.pushReplacement(
+      if (status == 'rejected') {
+        Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const TailorAvailabilitySettings(),
-          ),
-        );
-      }
-
-      // This will ready the application and direct to the tailorhomepage if availibility are set up
-      else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TailorHomePage(showAccepted: true),
-          ),
-        );
-      }
-    }
-
-    // the system will notify the user if their is an error within their role or if they're arent sign up yet
-    else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: Colors.blueGrey[100],
-          title: Text(
-            "Role Error",
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            "User role is not recognized.",
-            style: GoogleFonts.songMyung(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                "Okay",
-                style: GoogleFonts.songMyung(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+            builder: (_) => Scaffold(
+              body: Center(
+                child: Text(
+                  "Your account was rejected through this application.",
+                  style: GoogleFonts.oswald(),
                 ),
               ),
             ),
-          ],
-        ),
-      );
-    }
-  } on FirebaseAuthException catch (e) {
-    Navigator.pop(context);
+          ),
+        );
+      }
 
-    if (e.code == 'user-not-found') {
-      wrongEmailMessage();
-    } else if (e.code == 'wrong-password') {
-      wrongPasswordMessage();
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: Colors.blueGrey[100],
-          title: Text(
-            'Login Failed',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.playfairDisplay(
-              fontWeight: FontWeight.bold,
+      if (_rememberMe) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('saved_email', emailController.text.trim());
+        await prefs.setString('saved_password', passwordController.text.trim());
+      }
+      // New Customer Flow
+      if (role == 'Customer') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => CustomerHomePage()),
+        );
+      }
+      // New Tailor Flow
+      else if (role == 'Tailor') {
+        bool isApproved = data['approved'] ?? false;
+
+        Map availability = data['availability'] ?? {};
+        List days = availability['days'] ?? [];
+
+        bool hasAvailabilityFlag = data['hasAvailability'] ?? false;
+        bool hasAvailability = hasAvailabilityFlag && days.isNotEmpty;
+
+        // This navigation will navigate to the approcal pending screen if the user is not yet approved by administrator
+        if (!isApproved) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ApprovalPendingScreen(userId: uid),
             ),
-          ),
-          content: Text(
-            e.message ?? 'An error occurred.',
-            style: GoogleFonts.songMyung(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                "Okay",
-                style: GoogleFonts.songMyung(fontSize: 16),
+          );
+        }
+        // Elif condition if the approved tailor are directed to the availability setting to avoid confusion
+        else if (!hasAvailability) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const TailorAvailabilitySettings(),
+            ),
+          );
+        }
+        // This will ready the application and direct to the tailorhomepage if availibility are set up
+        else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TailorHomePage(showAccepted: true),
+            ),
+          );
+        }
+      }
+      // the system will notify the user if their is an error within their role or if they're arent sign up yet
+      else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.blueGrey[100],
+            title: Text(
+              "Role Error",
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ],
-        ),
-      );
+            content: Text(
+              "User role is not recognized.",
+              style: GoogleFonts.songMyung(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  "Okay",
+                  style: GoogleFonts.songMyung(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      Navigator.pop(context);
+
+      if (e.code == 'user-not-found') {
+        wrongEmailMessage();
+      } else if (e.code == 'wrong-password') {
+        wrongPasswordMessage();
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.blueGrey[100],
+            title: Text(
+              'Login Failed',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.playfairDisplay(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              e.message ?? 'An error occurred.',
+              style: GoogleFonts.songMyung(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text("Okay", style: GoogleFonts.songMyung(fontSize: 16)),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
-}
 
   void NoInput() {
     showDialog(
@@ -285,13 +311,32 @@ void signUserIn() async {
     );
   }
 
-  //password hide
+  void loadSavedLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final savedEmail = prefs.getString('saved_email') ?? '';
+    final savedPassword = prefs.getString('saved_password') ?? '';
+
+    if (savedEmail.isNotEmpty) {
+      emailController.text = savedEmail;
+    }
+
+    if (savedPassword.isNotEmpty) {
+      passwordController.text = savedPassword;
+      setState(() {
+        _rememberMe = true;
+      });
+    }
+  }
+
+  //password hide, password visibility
   bool passwordVisible = false;
-  //password visibility
+
   @override
   void initState() {
     super.initState();
     passwordVisible = false;
+    loadSavedLogin();
   }
 
   @override
@@ -436,7 +481,7 @@ void signUserIn() async {
                           context,
                           MaterialPageRoute(
                             builder: (context) {
-                              return ForgotPasswordbutton();
+                              return ForgotPasswordPage();
                             },
                           ),
                         );

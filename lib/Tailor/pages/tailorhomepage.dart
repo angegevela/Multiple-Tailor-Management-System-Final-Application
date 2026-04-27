@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:threadhub_system/Pages/notification_tab.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -49,7 +50,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
             color: Colors.transparent,
             child: Container(
               margin: const EdgeInsets.only(top: 56),
-              width: 250,
+              width: min(MediaQuery.of(context).size.width * 0.8, 300),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -444,6 +445,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
           .doc(appointmentId)
           .update({
             'status': 'Completed',
+            'orderReceived': true,
             'completedAt': FieldValue.serverTimestamp(),
           });
 
@@ -3286,21 +3288,29 @@ class _TailorHomePageState extends State<TailorHomePage> {
   Widget _buildMenuItemTap(
     IconData icon,
     String title, {
-    required VoidCallback onTap,
-    Color backgroundColor = Colors.white,
+    required Color backgroundColor,
     Color textColor = Colors.black,
     Color iconColor = Colors.black,
+    required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         color: backgroundColor,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         child: Row(
           children: [
-            Icon(icon, color: iconColor),
-            const SizedBox(width: 16),
-            Text(title, style: TextStyle(color: textColor)),
+            Icon(icon, color: iconColor, size: 22),
+            const SizedBox(width: 12),
+
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: textColor, fontSize: 15),
+              ),
+            ),
           ],
         ),
       ),

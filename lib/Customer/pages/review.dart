@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -105,6 +106,7 @@ class _RatingandReviewPageState extends State<RatingandReviewPage>
   }
 
   void _showReviewDialog() async {
+    bool isSubmitting = false;
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
     final userDoc = await FirebaseFirestore.instance
@@ -217,50 +219,116 @@ class _RatingandReviewPageState extends State<RatingandReviewPage>
                       const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (rating == 0 ||
-                                reviewController.text.trim().isEmpty) {
-                              return;
-                            }
+                        child: StatefulBuilder(
+                          builder: (context, setStateDialog) {
+                            return ElevatedButton(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () async {
+                                      if (rating == 0 ||
+                                          reviewController.text
+                                              .trim()
+                                              .isEmpty) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Please complete review",
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
 
-                            final displayName = postAsAnonymous
-                                ? "Anonymous"
-                                : realName;
+                                      setStateDialog(() => isSubmitting = true);
 
-                            await FirebaseFirestore.instance
-                                .collection('Users')
-                                .doc(widget.tailorId)
-                                .collection('Reviews')
-                                .add({
-                                  'rating': rating,
-                                  'reviewText': reviewController.text.trim(),
-                                  'userName': displayName,
-                                  'userId': currentUserId,
-                                  'appointmentId': widget.appointmentId,
-                                  'timestamp': FieldValue.serverTimestamp(),
-                                });
+                                      try {
+                                        final displayName = postAsAnonymous
+                                            ? "Anonymous"
+                                            : realName;
 
-                            await createNotificationForTailor(
-                              toTailorId: widget.tailorId,
-                              title: "Review Received",
-                              body: "$displayName left a new review for you",
-                              appointmentId: widget.appointmentId,
+                                        final reviewRef = FirebaseFirestore
+                                            .instance
+                                            .collection('Users')
+                                            .doc(widget.tailorId)
+                                            .collection('Reviews');
+
+                                        final batch = FirebaseFirestore.instance
+                                            .batch();
+
+                                        final newReview = reviewRef.doc();
+
+                                        batch.set(newReview, {
+                                          'rating': rating,
+                                          'reviewText': reviewController.text
+                                              .trim(),
+                                          'userName': displayName,
+                                          'userId': currentUserId,
+                                          'appointmentId': widget.appointmentId,
+                                          'timestamp':
+                                              FieldValue.serverTimestamp(),
+                                        });
+
+                                        final appointmentRef = FirebaseFirestore
+                                            .instance
+                                            .collection('Appointment Forms')
+                                            .doc(widget.appointmentId);
+
+                                        batch.update(appointmentRef, {
+                                          'reviewSubmitted': true,
+                                        });
+
+                                        await batch.commit();
+
+                                        await createNotificationForTailor(
+                                          toTailorId: widget.tailorId,
+                                          title: "Review Received",
+                                          body:
+                                              "$displayName left a new review for you",
+                                          appointmentId: widget.appointmentId,
+                                        );
+
+                                        if (!mounted) return;
+
+                                        Navigator.pop(context); // close dialog
+                                        Navigator.pop(
+                                          context,
+                                          true,
+                                        ); // return to previous page
+                                      } catch (e) {
+                                        setStateDialog(
+                                          () => isSubmitting = false,
+                                        );
+
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Failed to submit review",
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF261E27),
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      "Write A Review",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                             );
-
-                            Navigator.pop(context);
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF261E27),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: const Text(
-                            "Write A Review",
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
                         ),
                       ),
                     ],

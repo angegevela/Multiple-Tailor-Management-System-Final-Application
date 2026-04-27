@@ -143,6 +143,8 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
       _password = _passwordController.text.trim().isEmpty;
       _confirmPass = _confirmpasswordController.text.trim().isEmpty;
       _barangay = selectedBarangay == null;
+      _businessPermitError =
+          _businessPermitFiles == null || _businessPermitFiles!.isEmpty;
       _isloading = true;
     });
 
@@ -153,13 +155,21 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
         _address ||
         _password ||
         _confirmPass ||
-        _barangay) {
+        _barangay ||
+        _businessPermitError) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please fill all required fields.')),
       );
       return;
     }
+    if (_businessPermitFiles == null || _businessPermitFiles!.isEmpty) {
+      setState(() => _businessPermitError = true);
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please upload your business permit.')),
+      );
+      return;
+    }
     if (!_rememberMe) {
       if (!mounted) return;
       showDialog(
@@ -349,11 +359,17 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
       if (user == null) return;
 
       if (!mounted) return;
+      await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(user.uid)
+          .set(userData);
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
+        MaterialPageRoute(
+          builder: (_) => ApprovalPendingScreen(userId: user.uid),
+        ),
       );
-
       await FirebaseFirestore.instance
           .collection('Users')
           .doc(user.uid)
@@ -363,7 +379,9 @@ class _TailorSignUpPageState extends State<TailorSignUpPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ApprovalPendingScreen()),
+        MaterialPageRoute(
+          builder: (_) => ApprovalPendingScreen(userId: user.uid),
+        ),
       );
 
       // showDialog(

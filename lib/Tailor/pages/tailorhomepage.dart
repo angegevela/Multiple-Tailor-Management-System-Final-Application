@@ -50,7 +50,7 @@ class _TailorHomePageState extends State<TailorHomePage> {
             color: Colors.transparent,
             child: Container(
               margin: const EdgeInsets.only(top: 56),
-              width: min(MediaQuery.of(context).size.width * 0.8, 300),
+              width: MediaQuery.of(context).size.width * 0.8,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
